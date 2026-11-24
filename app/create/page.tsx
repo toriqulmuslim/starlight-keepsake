@@ -4,7 +4,7 @@ import { PixelSparkle, PixelArrow } from "@/components/PixelIcons";
 
 export default function CreateGiftPage() {
   return (
-    <main className="min-h-screen starlight-bg flex flex-col items-center px-4 py-8 md:py-12 text-slate-100 relative">
+    <main className="min-h-screen starlight-bg flex flex-col items-center px-4 pt-8 pb-[max(2.5rem,env(safe-area-inset-bottom))] md:py-12 text-slate-100 relative">
       {/* Tombol Kembali ke Beranda */}
       <div className="w-full max-w-2xl mb-6 flex items-center justify-between">
         <Link

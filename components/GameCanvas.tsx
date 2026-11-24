@@ -28,14 +28,12 @@ import {
 } from "./PixelIcons";
 
 /**
- * Fungsi murni penghitung skala bulat anti-burik (PRD.md Bagian 4.1 & Bagian 8.2)
- * Basis resolusi virtual Hi-Bit: 480×270 (Rasio 16:9, pas kelipatan 4× di 1920×1080)
+ * Fungsi murni penghitung skala Full-Viewport 16:9 anti-burik
+ * Basis resolusi virtual Hi-Bit: 480×270 (Rasio 16:9 proporsional maksimal viewport tanpa batasan integer)
  */
 export function computeScale(availW: number, availH: number): number {
-  const raw = Math.min(availW / 480, availH / 270);
-  if (raw >= 3) return Math.floor(raw);          // Layar besar: kelipatan bulat (3x, 4x, 5x, 6x)
-  if (raw >= 1.5) return Math.floor(raw * 2) / 2; // Layar sedang: kelipatan 0.5 (1.5x, 2x, 2.5x)
-  return raw;                                    // Layar mobile / portrait: proporsional pas layar
+  if (availW <= 0 || availH <= 0) return 1;
+  return Math.min(availW / 480, availH / 270);
 }
 
 interface GameCanvasProps {

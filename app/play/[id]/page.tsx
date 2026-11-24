@@ -65,6 +65,16 @@ function PlayGiftContent() {
   const [loadProgress, setLoadProgress] = useState(0);
   const [isFading, setIsFading] = useState(false);
   const [adventureSnapshot, setAdventureSnapshot] = useState<string | null>(null);
+  const [showLandscapeBanner, setShowLandscapeBanner] = useState(true);
+
+  // Auto-dismiss saran mode landscape setelah 4 detik saat permainan dimulai
+  useEffect(() => {
+    if (!hasStarted) return;
+    const timer = setTimeout(() => {
+      setShowLandscapeBanner(false);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [hasStarted]);
 
   // Safety timeout 5.5 detik: paksa loadProgress = 100 jika jaringan lambat
   useEffect(() => {
@@ -203,6 +213,7 @@ function PlayGiftContent() {
   // Main lagi (restart sesi permainan)
   const handlePlayAgain = () => {
     stopBgm();
+    setShowLandscapeBanner(true);
     setIsWon(false);
     setHasStarted(false);
   };
@@ -264,8 +275,8 @@ function PlayGiftContent() {
       )}
 
       {/* 2. Banner Saran Mode Landscape untuk HP Portrait (tidak memblokir permainan) */}
-      {isPortrait && isTouchDevice && hasStarted && (
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-40 bg-black/80 border border-yellow-400 px-3 py-1 text-[9px] text-[#f6d32d] font-pixel pointer-events-none rounded">
+      {isPortrait && isTouchDevice && hasStarted && showLandscapeBanner && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-40 bg-black/85 border border-[#ffd166]/80 px-3.5 py-1.5 text-[9px] text-[#ffd166] font-pixel pointer-events-none rounded shadow-[0_4px_12px_rgba(0,0,0,0.8)] animate-fade-in transition-opacity duration-300">
           ↻ Putar layar Anda (Landscape disarankan)
         </div>
       )}
@@ -337,9 +348,8 @@ function PlayGiftContent() {
 
       {/* Tirai Transisi Fade-In / Fade-Out 0.3s Antar Adegan (Fase P-1) */}
       <div
-        className={`fixed inset-0 bg-black z-[450] pointer-events-none transition-opacity duration-300 ${
-          isFading ? "opacity-100" : "opacity-0"
-        }`}
+        className={`fixed inset-0 bg-black z-[450] pointer-events-none transition-opacity duration-300 ${isFading ? "opacity-100" : "opacity-0"
+          }`}
       />
     </main>
   );
