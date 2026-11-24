@@ -1,143 +1,135 @@
-# Digital-8-Bit
+<div align="center">
 
-> **A Heartwarming 16-Bit HD-2D Retro Action-RPG Interactive Gift Experience**  
-> *Ubah ucapan selamat ulang tahun, anniversary, atau ungkapan terima kasih menjadi petualangan game retro 16-bit yang tak terlupakan.*
+# Starlight Keepsake
+### 16-Bit HD-2D Retro Action-RPG Interactive Gift Experience
 
-**Teknologi:** Next.js 16 | React 19 | TypeScript | KAPLAY | Tailwind CSS v4
+*Ubah ucapan ulang tahun, anniversary, atau ungkapan terima kasih menjadi petualangan game retro 16-bit berkesan yang dapat dimainkan langsung di web.*
+
+<br/>
+
+[![Next.js 16](https://img.shields.io/badge/Next.js%2016-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![React 19](https://img.shields.io/badge/React%2019-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind CSS v4](https://img.shields.io/badge/Tailwind_CSS_v4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![KAPLAY.js](https://img.shields.io/badge/KAPLAY.js-FF2D20?style=for-the-badge&logo=javascript&logoColor=white)](https://kaplayjs.com/)
+[![Web Audio API](https://img.shields.io/badge/Web_Audio_API-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
+[![Google Apps Script](https://img.shields.io/badge/Google_Apps_Script-34A853?style=for-the-badge&logo=googlesheets&logoColor=white)](https://developers.google.com/apps-script)
+[![ImgBB API](https://img.shields.io/badge/ImgBB_API-0080FF?style=for-the-badge&logo=icloud&logoColor=white)](https://imgbb.com/)
+[![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)](https://playwright.dev/)
+[![License MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+
+<br/>
+
+[**Coba Demo Langsung**](https://starlight-keepsake.vercel.app/play/demo-quiz) • [**Baca Master PRD**](./PRD.md) • [**Cara Menjalankan**](#quick-start)
+
+</div>
 
 ---
 
-## Hero Showcase
+## Tentang Proyek
 
-![Digital-8-Bit Gameplay HD](./docs/screenshots/gameplay-hd.png)
+**Starlight Keepsake** adalah platform web modern yang mentransformasikan kartu ucapan konvensional menjadi petualangan aksi-RPG *16-bit HD-2D* bertema *Cozy Sunset & Starlight*.
 
----
-
-## Tentang Digital-8-Bit
-
-**Digital-8-Bit** adalah platform web interaktif yang mentransformasikan kartu ucapan konvensional menjadi petualangan aksi-RPG 16-bit (*Cozy Sunset Fantasy*). 
-
-Penerima kado tidak hanya membaca pesan, melainkan memainkan karakter petualang melintasi atap gedung kota senja, menjawab kuis kenangan pribadi untuk mendapatkan buff tempur, bertemu kembali dengan sang kekasih (*Partner Co-op*) di bawah Pohon Sakura Raksasa, bertarung mengalahkan Naga Penjaga Kado (*Dragon Boss*), mengeksekusi serangan kombo pamungkas *Duo Starlight Slash*, hingga akhirnya membuka kotak kado berisi foto kenangan dan pesan manis yang dapat diunduh sebagai **Kartu Pos Polaroid HD (.PNG)** lengkap dengan stempel prangko petualangan.
-
-Semua dokumen master rancangan sistem, arsitektur teknis, dan filosofi desain game terpusat di:
-**[PRD.md](./PRD.md)**
+Penerima kado memainkan karakter pahlawan pilihan mereka melintasi atap kota senja, menjawab kuis kenangan pribadi untuk mendapatkan buff tempur, bereuni dengan pasangan (*AI Co-op Partner*) di bawah naungan Pohon Sakura Raksasa, bertarung mengalahkan *Dragon Boss*, mengeksekusi serangan kombo pamungkas **Duo Starlight Slash**, dan membuka peti kado berisi foto kenangan serta pesan manis yang dapat diekspor menjadi **Kartu Pos Polaroid HD (.PNG)** lengkap dengan stempel prangko petualangan.
 
 ---
 
 ## Fitur Unggulan
 
-### 1. 4 Babak Cerita & Prolog Live Cutscene
-- **Prolog Sinematik JRPG (`PrologueModal`):** Naskah dialog pembuka bergaya live cutscene yang menceritakan pencurian kado oleh monster bayangan, animasi penutur pixelated, serta panduan kontrol ringkas sebelum gameplay dimulai.
-- **Babak 1 (Atap Kota Senja):** Pengenalan mekanik gerak, tebasan pedang, monster slime/bat/skeleton, dan tantangan kuis kenangan.
-- **Babak 2 (Puncak Sakura & Reuni Pasangan):** Landmark Pohon Sakura Raksasa, ayunan kayu berdua (*couple swing*), pemulihan nyawa (*Full Heal*), dan bergabungnya Partner sebagai AI Co-op pendamping.
-- **Babak 3 (Pertarungan Naga Penjaga Kado):** Penguncian arena segel ungu, pertarungan Dragon Boss berfase Enraged, semburan bola api yang dapat ditebas balik (*deflect*), kibasan ekor, dan eksekusi serangan kombo duo.
-- **Babak 4 (Mode Damai Post-Game):** Suasana fajar emas yang damai setelah boss dikalahkan, memungkinkan pemain bersantai berdua di ayunan atau membuka kado kapan saja.
-
-### 2. Arsitektur Hybrid HD-2D (Retina HD UI + 480×270 Virtual Screen)
-- **Viewport Game Proporsional:** Resolusi virtual kanvas KAPLAY beresolusi `480×270` piksel dengan kelipatan skala bulat presisi (*pixel-perfect integer scaling*) berasio aspek 16:9 bebas distorsi.
-- **Retina HD UI Layer:** 100% teks dialog, title card boss, HUD HP hati, buff chip, combo counter, dan tombol aksi dirender menggunakan lapisan HTML5 + SVG vektor tajam resolusi asli layar perangkat (bebas emoji bawaan OS).
-
-### 3. Langit Dinamis & Atmosfer Taman Sakura
-- Transisi gradasi langit berbasis posisi pemain dan status pertarungan (*smooth lerp*): **Senja Jingga Hangat** -> **Malam Berbintang Sakura** -> **Tengah Malam Ungu Naga** -> **Fajar Emas Kemenangan**.
-- Efek visual hidup: guguran kelopak sakura acak, 8 kunang-kunang emas di puncak pohon, pendar lampu gantung *fairy lights*, serta efek *hitstop* & *hit-flash* yang memuaskan.
-
-### 4. AI Co-op Partner, Dragon Boss & Duo Starlight Slash
-- **AI Partner:** Menemani pemain menapaki kontur atap bertingkat tanpa mengambang, meniru lompatan, dan membantu menyerang monster serta boss secara otomatis setiap 3.0 detik.
-- **Dragon Boss (3 Spritesheet Asli):** Menggunakan animasi murni *Idle*, *Breath*, dan *Tail* dari koleksi aset retro Gothicvania tanpa sambungan buatan, dengan hitbox fisik presisi dan indikator HP segmented 9-slice.
-- **Finisher Duo Starlight Slash:** Saat HP Boss tersisa 1, boss masuk ke status *Stunned*. Tombol prompt `[F] / TAP SERANGAN DUO!` muncul, memicu animasi *Cut-In Banner* dramatis pemain & partner, tebasan silang emas, dan ledakan konfeti kemenangan.
-
-### 5. Easter Egg Ayunan Berdua & Mode Damai
-- Pemain dan Partner dapat duduk berdampingan di ayunan gantung di bawah pohon sakura (`x = 1228`), memicu *soft camera zoom* `1.15x` dan kotak dialog manis JRPG.
-- Pemain dapat berdiri kembali kapan saja dengan menekan tombol gerak, lompat, `E`, `Esc`, atau mengetuk layar.
-
-### 6. Personalisasi Lengkap (/create)
-- Form pembuatan kado yang ramah pengguna dengan validasi komprehensif.
-- Kustomisasi nama penerima, pesan panjang, tautan musik latar, dan pilihan avatar (Laki-laki / Perempuan).
-- **Quiz Builder Dinamis:** Hingga 3 soal kuis kenangan dengan 4 pilihan ganda, hadiah buff gameplay (`shield`, `speed`, `power_star`), serta tautan foto petunjuk opsional.
-- **Pesan 4 Bintang Kenangan:** Personalisasi kalimat manis yang muncul saat pemain mengumpulkan tiap bintang di perjalanan (maksimal 40 karakter per bintang).
-
-### 7. Engine Audio Chiptune Prosedural (Web Audio API)
-- Generator audio 8-bit prosedural zero-file tanpa beban aset eksternal: efek suara tebasan, lompat, damage, checkpoint chime, lonceng angin puncak sakura, hingga jingle kemenangan.
-- Dukungan BGM preset berulang (*chiptune loop*) dan URL audio eksternal dengan penanganan aman terhadap kebijakan *browser autoplay restriction*.
-
-### 8. Ekspor Kartu Kado Polaroid (.PNG)
-- Hadiah dibuka dengan efek mesin tik dan taburan konfeti.
-- Fitur **Simpan Kartu Kado**: Me-render kartu polaroid retro beresolusi tinggi (800×1140 px, anti-aliased font, bevel border) lengkap dengan foto kenangan, ucapan personal, serta **Prangko Foto "MOMEN PETUALANGAN"** yang diambil langsung dari kanvas gameplay saat pertarungan usai.
+| Fitur | Deskripsi Singkat |
+| :--- | :--- |
+| **3-Step RPG Quest Wizard** | Formulir pembuatan kado `/create` terbagi rapi ke dalam 3 langkah dengan **Live Preview Kartu Kado real-time** di desktop dan peringatan validasi *Soft Amber* yang lembut. |
+| **Full-Viewport 16:9 Engine** | Penskalaan kanvas adaptif `Math.min(vw/480, vh/270)` memenuhi layar 100% tanpa bingkai gelap tebal di laptop/desktop, tetap tajam dengan CSS `image-rendering: pixelated;`. |
+| **4 Babak Cerita & Prolog Sinematik** | Alur sinematik JRPG lengkap: Pencurian kado oleh *Shadow Boss*, reuni emosional di Puncak Sakura, arena pertempuran naga, dan mode damai pasca tamat (*Peaceful Post-Game*). |
+| **JRPG 2-Stage Typewriter** | Animasi ketikan mesin tik bebas *glitch* dan *race condition* dengan `useRef`. Klik atau Spasi saat mengetik langsung menyelesaikan teks instan; klik berikutnya memajukan cerita. |
+| **AI Co-op Partner & Duo Finisher** | Rekan petualang AI yang mendampingi naik-turun atap, membantu menyerang berkala, menyelamatkan saat HP kritis (*Partner Rescue*), serta eksekusi tebasan silang duet *Duo Starlight Slash*. |
+| **Procedural Chiptune Audio** | Generator audio 8-bit prosedural menggunakan native Web Audio API (zero asset lag) dengan 3 preset lagu chiptune berulang, dukungan custom MP3, dan unlock sinkron anti-blokir browser. |
+| **Polaroid Export (.PNG)** | Hasil kado diarsipkan menjadi kartu polaroid digital 800×1140 px siap cetak dengan stempel prangko *Momen Petualangan* hasil tangkapan layar kanvas kemenangan. |
+| **Mobile First & Thumb-Friendly** | Virtual D-Pad ergonomis, safe-area padding iPhone/Android, dan banner orientasi potret auto-dismiss 4 detik yang tidak menutupi HUD. |
 
 ---
 
-## Galeri Tangkapan Layar
+## Tech Stack & Ekosistem
 
-| Beranda Retro Desktop | Prolog Cutscene JRPG |
-|:---:|:---:|
-| ![Beranda Desktop](./docs/screenshots/home-desktop.png)<br>*(Halaman Utama & Preview Kado)* | ![Prolog Cutscene](./docs/screenshots/prologue-cutscene.png)<br>*(Prolog Sinematik Adegan Klimaks)* |
-| **Kustomisasi Kado & Kuis** | **Kontrol Sentuh Mobile (D-Pad)** |
-| ![Quiz Builder](./docs/screenshots/create-builder.png)<br>*(Builder Kuis & Pesan Bintang Kenangan)* | ![Mobile D-Pad](./docs/screenshots/mobile-dpad.png)<br>*(Gameplay Responsif di Layar Sentuh Smartphone)* |
-
----
-
-## Tech Stack & Arsitektur
-
-| Komponen | Teknologi | Keterangan |
-| :--- | :--- | :--- |
-| **Frontend Framework** | Next.js 16 (App Router) & React 19 | SSR untuk landing & `/create`, Client-Only (`ssr: false`) untuk kanvas game. |
-| **Bahasa Pemrograman** | TypeScript 5.0 | Type safety ketat di seluruh entitas game, API payload, dan state manajemen. |
-| **Game Engine** | KAPLAY (`v3001.0.19`) | Engine 2D berbasis WebGL, arsitektur ECS terisolasi di dalam `lib/game/`. |
-| **Styling & Desain** | Tailwind CSS v4 + Custom Pixel CSS | Resolusi tajam `image-rendering: pixelated`, font `Press Start 2P` & `Plus Jakarta Sans`. |
-| **Audio Engine** | Web Audio API + HTML5 Audio | Generator gelombang kotak (*square wave*) prosedural untuk sound effect retro. |
-| **Database & API** | Google Apps Script (GAS) + Google Sheets | Penyimpanan kado berbasis spreadsheet serverless tanpa biaya bulanan. |
-| **Penyimpanan Gambar** | ImgBB REST API | Kompresi kanvas client-side sebelum upload untuk efisiensi bandwidth. |
-| **Pengujian E2E** | Playwright Chromium Engine | Suite QA otomatis untuk pengujian skenario desktop, mobile, console, dan network. |
+- **Frontend Core:** [Next.js 16](https://nextjs.org/) (App Router) & [React 19](https://react.dev/)
+- **Bahasa:** [TypeScript 5](https://www.typescriptlang.org/) (Strict Mode & Clean Architecture)
+- **Game Engine:** [KAPLAY.js](https://kaplayjs.com/) (`v3001.0.19`, WebGL 2D ECS terisolasi di `lib/game/`)
+- **Styling & UI:** [Tailwind CSS v4](https://tailwindcss.com/) + Custom Pixel-Art CSS Utilities
+- **Audio Engine:** Web Audio API Native + HTML5 Audio Scheduler
+- **Backend & Database:** [Google Apps Script](https://developers.google.com/apps-script) + Google Sheets (Serverless, No Monthly Cost)
+- **Penyimpanan Media:** [ImgBB REST API](https://imgbb.com/) (Client-side Canvas Pre-Compression)
+- **Quality Assurance:** [Playwright](https://playwright.dev/) End-to-End Automated Browser Testing
 
 ---
 
-## Menjalankan Proyek Secara Lokal (Quick Start)
+## Quick Start
 
-### 1. Kloning Repositori
+### 1. Kloning & Pasang Dependensi
 ```bash
-git clone https://github.com/username/digital-8-bit.git
-cd digital-8-bit
-```
-
-### 2. Pasang Dependensi
-```bash
+git clone https://github.com/toriqulmuslim/starlight-keepsake.git
+cd starlight-keepsake
 npm install
 ```
 
-### 3. Konfigurasi Variabel Lingkungan
-Salin file `.env.example` menjadi `.env.local`:
-```bash
-cp .env.example .env.local
-```
-Isi variabel berikut sesuai kebutuhan:
+### 2. Konfigurasi Lingkungan (`.env.local`)
+Buat berkas `.env.local` di root proyek:
 ```env
-# URL Web App Google Apps Script untuk penyimpanan data kado (opsional untuk mode demo)
+# URL Web App Google Apps Script (Opsional untuk pengujian demo lokal)
 NEXT_PUBLIC_GAS_URL=https://script.google.com/macros/s/YOUR_GAS_DEPLOYMENT_ID/exec
 
-# ImgBB API Key untuk upload foto kado (opsional, fallback ke direct link jika kosong)
+# ImgBB API Key untuk unggah foto kado (Opsional)
 NEXT_PUBLIC_IMGBB_API_KEY=your_imgbb_api_key_here
 ```
 
-### 4. Jalankan Development Server
+### 3. Jalankan Development Server
 ```bash
 npm run dev
 ```
-Buka [http://localhost:3000](http://localhost:3000) di browser Anda.
+Buka [http://localhost:3000](http://localhost:3000) di peramban Anda.
 
-### Mode Demo Publik Instan (Tanpa Setup Backend)
-Anda dapat langsung mencoba gameplay lengkap dengan 3 tantangan kuis, dialog reuni, dan pertarungan boss naga tanpa perlu menyiapkan Google Apps Script dengan mengunjungi:  
-**[http://localhost:3000/play/demo-quiz](http://localhost:3000/play/demo-quiz)**
+> **Mode Demo Publik Instan:** Anda dapat langsung mencoba gameplay lengkap tanpa setup backend di:  
+> **[https://starlight-keepsake.vercel.app/play/demo-quiz](https://starlight-keepsake.vercel.app/play/demo-quiz)**
 
-### 5. Verifikasi Kualitas Kode & Build Produksi
-Pastikan seluruh kode bersih dari error tipe data, linting, dan build sebelum deploy:
+---
+
+## Verifikasi & Standar Kode
+
+Proyek ini menerapkan protokol verifikasi ketat sebelum setiap *commit*:
 ```bash
-npx tsc --noEmit && npm run lint && npx next build --webpack
+# 1. Typecheck TypeScript
+npx tsc --noEmit
+
+# 2. Linting Kode
+npm run lint
+
+# 3. Production Build
+npx next build --webpack
 ```
 
 ---
 
-## Lisensi & Kredit Aset
+## Struktur Direktori Ringkas
 
-- **Kode Sumber:** Dilisensikan di bawah [MIT License](LICENSE).
-- **Aset Sprite Retro:** Koleksi sprite platformer retro 16-bit berasal dari lisensi aset publik *Legacy Collection* / *Grotto Escape 2* oleh Ansimuz.
-- **Karya & Dedikasi:** Dibuat dengan penuh dedikasi untuk menghadirkan kebahagiaan melalui medium game retro pixel art.
+```
+starlight-keepsake/
+├── app/                        # Next.js App Router (/, /create, /play/[id])
+├── components/                 # UI Komponen React, Wizard 3-Langkah, & JRPG Modal
+├── lib/
+│   ├── api.ts                  # Integrasi Google Apps Script & SessionStorage Cache
+│   ├── imgbb.ts                # Client Image Upload & Canvas Compression
+│   ├── types.ts                # Kontrak Data TypeScript & Skema Buff
+│   └── game/                   # Logika Murni Game KAPLAY (Bebas Hook React)
+├── gas/
+│   └── Code.js                 # Kode Backend Google Apps Script (Kolom A-I Sheet)
+├── public/                     # Aset Musik 8-Bit & Sprite Retro 16-Bit
+├── PRD.md                      # Master Product Requirement Document
+└── README.md                   # Dokumentasi Utama Repositori
+```
+
+---
+
+## Lisensi & Atribusi
+
+- **Source Code:** Berlisensi [MIT License](LICENSE).
+- **Aset Sprite 16-Bit:** Lisensi aset publik retro oleh Ansimuz (*Legacy Collection / Grotto Escape 2*).
+- **Spesifikasi Lengkap:** Pelajari seluruh detail teknis, formula fisika, dan aturan arsitektur di [PRD.md](./PRD.md).

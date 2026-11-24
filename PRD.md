@@ -1,43 +1,43 @@
-# Product Requirement Document (PRD) Master: Digital-8-Bit
-**Petualangan Kado Interaktif 16-Bit (Cozy Sunset & Starlight Action-RPG)**
+# Product Requirement Document (PRD) Master: Starlight Keepsake
+**Petualangan Kado Interaktif 16-Bit HD-2D (Cozy Sunset & Starlight Action-RPG)**
 
 ---
 
 ## 1. Gambaran Umum & Tech Stack
 
 ### 1.1 Ringkasan Proyek
-**Digital-8-Bit** adalah platform web interaktif untuk membuat kado digital personal berbasis web. Pengguna dapat merancang pesan kasih sayang, mengunggah foto kenangan, menyusun tantangan kuis teka-teki manis, serta memilih musik latar 8-bit. Hasil kado diterbitkan menjadi sebuah tautan mini-game petualangan *16-bit Action-RPG* bertema *Cozy Sunset & Starlight* di mana penerima kado mengendalikan karakter pilihan mereka, menjelajahi atap kota senja bersama *Companion Pet*, mengalahkan monster, menjawab kuis rahasia, dan membuka kotak kado spesial di garis akhir. Di akhir misi, penerima dapat menyimpan Kartu Kado (.PNG) berkualitas tinggi bergaya polaroid koleksi.
+**Starlight Keepsake** (sebelumnya *Digital-8-Bit*) adalah platform web interaktif untuk membuat kado digital personal berbasis web dengan estetika *16-bit HD-2D*. Pengguna dapat merancang pesan kasih sayang, mengunggah foto kenangan, menyusun tantangan kuis teka-teki manis, serta memilih musik latar 8-bit melalui wizard 3 langkah dengan *Live Preview*. Hasil kado diterbitkan menjadi sebuah tautan mini-game petualangan *16-bit Action-RPG* bertema *Cozy Sunset & Starlight* di mana penerima kado mengendalikan karakter pilihan mereka, menjelajahi atap kota senja bersama *Companion Pet*, mengalahkan monster, menjawab kuis rahasia, bergabung bersama *Partner Co-op* di bawah Pohon Sakura, menaklukkan *Dragon Boss* dengan *Duo Starlight Slash Finisher*, dan membuka kotak kado spesial di garis akhir. Di akhir misi, penerima dapat menyimpan Kartu Kado (.PNG) berkualitas tinggi bergaya polaroid koleksi lengkap dengan stempel prangko mini snapshot petualangan.
 
 ### 1.2 Tech Stack Utama
-- **Framework Web:** Next.js 16 (App Router, React 19, Turbopack / Webpack).
+- **Framework Web:** Next.js 16 (App Router, React 19, Webpack / Turbopack).
 - **Styling & Tema:** Tailwind CSS v4, Custom RPG Utility Classes (`globals.css`), CSS Pixel-Art Filtering (`image-rendering: pixelated`).
-- **Game Engine:** KAPLAY.js (mode isolated instance `global: false`, resolusi virtual 480×270, rasio 16:9, scale wrapper responsif anti-burik).
-- **Audio Engine:** Modul mandiri Web Audio API & HTML5 Audio singleton (`lib/game/sfx.ts`, zero React dependency, look-ahead scheduler 8-bit synth).
-- **Backend Database:** Google Sheets via Google Apps Script (GAS) Web App (Simple Request tanpa preflight CORS, format teks polos `@`, pencarian cepat `createTextFinder`).
+- **Game Engine:** KAPLAY.js (mode isolated instance `global: false`, resolusi virtual 480×270, rasio 16:9, penskalaan adaptif Full-Viewport 16:9 anti-burik).
+- **Audio Engine:** Modul mandiri Web Audio API & HTML5 Audio singleton (`lib/game/sfx.ts`, zero React dependency, look-ahead scheduler 8-bit chiptune synthesizer).
+- **Backend Database:** Google Sheets via Google Apps Script (GAS) Web App (Simple Request tanpa preflight CORS, format teks polos `@`, pencarian cepat `createTextFinder`, skema Kolom A–I).
 - **Media Storage:** ImgBB API (client-side canvas pre-compression untuk file > 1.5 MB ke maksimal 1600 px kualitas 0.85, batas timeout 60 detik).
 - **Visual & Typography:**
   - Font Judul & Aksen: `"Press Start 2P"` (Google Fonts).
   - Font Teks & Formulir: `"Plus Jakarta Sans"` (Google Fonts).
-  - Animasi & Efek: Canvas Confetti, Partikel Ledakan 16-Bit, Mesin Tik UTF-8 (kode poin aman emoji).
+  - Animasi & Efek: Canvas Confetti, Partikel Ledakan 16-Bit, Mesin Tik JRPG 2-Tahap UTF-8 (kode poin aman emoji, bebas race condition).
 
 ### 1.3 Arsitektur Direktori
 ```
-Digital-8-Bit/
+starlight-keepsake/
 ├── app/                        # Next.js App Router
-│   ├── layout.tsx              # Root layout & pemuatan Google Fonts
-│   ├── page.tsx                # Beranda (Title Screen / Quest Intro)
+│   ├── layout.tsx              # Root layout & pemuatan Google Fonts (min-h-dvh, smooth scroll)
+│   ├── page.tsx                # Beranda (Hero Split Starlight Keepsake + 3 Langkah Quest)
 │   ├── not-found.tsx           # Layar 404 retro 8-bit global
 │   ├── globals.css             # Tema warna, utilitas RPG, skala z-index
-│   ├── create/page.tsx         # Halaman formulir pembuatan kado
-│   └── play/[id]/page.tsx      # Halaman petualangan game penerima kado
+│   ├── create/page.tsx         # Halaman formulir pembuatan kado (3-Step RPG Wizard)
+│   └── play/[id]/page.tsx      # Halaman petualangan game penerima kado (Full-screen)
 ├── components/                 # Komponen Antarmuka React
-│   ├── CreateForm.tsx          # Form multi-seksi pembuatan kado & quiz builder
-│   ├── GameCanvas.tsx          # Wrapper canvas KAPLAY, HUD retro, & lifecycle
-│   ├── StartScreen.tsx         # Layar penyambutan PRESS START
-│   ├── PrologueModal.tsx       # Modal Live Cutscene & JRPG Dialogue Box pembuka cerita
-│   ├── ReunionModal.tsx        # Modal dialog reuni romantis di bawah Pohon Sakura
-│   ├── ChallengeModal.tsx      # Modal interaksi kuis rahasia NPC kelinci (Warm Parchment)
-│   ├── GiftModal.tsx           # Modal selebrasi kado, mesin tik, & ekspor kartu PNG
+│   ├── CreateForm.tsx          # 3-Step RPG Quest Wizard + Live Preview Card (Amber Soft Validation)
+│   ├── GameCanvas.tsx          # Wrapper canvas KAPLAY (Full-Viewport 16:9), HUD retro, & lifecycle
+│   ├── StartScreen.tsx         # Layar penyambutan PRESS START & preloader 0% -> 100%
+│   ├── PrologueModal.tsx       # Modal Live Cutscene JRPG (2-Stage Typewriter State Machine)
+│   ├── ReunionModal.tsx        # Modal dialog reuni romantis (2-Stage Typewriter State Machine)
+│   ├── ChallengeModal.tsx      # Modal interaksi kuis rahasia NPC kelinci (Clean Timer Cleanup)
+│   ├── GiftModal.tsx           # Modal selebrasi kado, mesin tik instan skip, & ekspor kartu PNG
 │   ├── PixelRibbonBanner.tsx   # Banner pita piksel 16-bit RPG klasik untuk header modal
 │   ├── PixelPhotoFrame.tsx     # Bingkai foto 9-slice ornamen emas & sudut permata piksel
 │   ├── PixelIcons.tsx          # Pustaka ikon piksel SVG 16-bit tajam (Zero-Emoji)
@@ -54,12 +54,12 @@ Digital-8-Bit/
 │       ├── sfx.ts              # Sintesis audio BGM 8-bit & efek suara
 │       └── sprites.ts          # Registrasi sprite, fallback prosedural, & scaling
 ├── gas/
-│   └── Code.js                 # Kode backend Google Apps Script
+│   └── Code.js                 # Kode backend Google Apps Script (Kolom A-I)
 ├── public/
 │   ├── music/                  # Berkas BGM audio (cozy, happy, romantic)
 │   └── sprites/                # Aset visual 16-bit PNG yang dioptimasi
 ├── PRD.md                      # Dokumen spesifikasi tunggal (Single Source of Truth)
-└── AGENTS.md                   # Aturan agen AI & panduan Next.js
+└── README.md                   # Dokumentasi publik repositori GitHub
 ```
 
 ---
@@ -115,46 +115,64 @@ Digital-8-Bit/
 ```
 
 ### 2.1 Halaman Beranda (`/`)
-- Desain *Title Screen* game indie dengan latar belakang berbintang halus (`starlight-bg`).
-- Ilustrasi kotak kado 16-bit dengan aksen pita emas berkilau dan aura senja.
-- Dua aksi utama: **Buat Kado Sekarang** menuju `/create` dan **Coba Contoh Kado** menuju `/play/demo-quiz` (berjalan tanpa ketergantungan koneksi Google Sheets).
-- Kartu panduan 3 langkah mudah: Persiapan Pesan & Foto → Personalisasi Petualangan & Kuis → Bagikan & Rayakan.
+- Desain *Hero Split* (2 Kolom Desktop, Stack Vertikal Rapi di Layar Ponsel) dengan tema *Starlight Keepsake* (16-bit HD-2D) berlatar belakang berbintang dinamis (`starlight-bg`).
+- Sisi Kiri: Headline tajam, subjudul hangat yang singkat, dan 2 tombol aksi utama: **Buat Kado Sekarang** menuju `/create` dan **Coba Contoh Kado** menuju `/play/demo-quiz` (berjalan tanpa ketergantungan koneksi Google Sheets).
+- Sisi Kanan: Bingkai pratinjau visual game 16-bit asli menggunakan aset internal proyek (`bg_city_mid`, sprite pahlawan, pet, dan peti kado).
+- Di bawah Hero: Alur quest 3 langkah singkat yang lega dan nyaman di-scroll: Persiapan Pesan & Foto → Personalisasi Petualangan & Kuis → Bagikan & Rayakan.
+- Seluruh halaman menggunakan `min-h-dvh` dengan scroll mulus tanpa batasan `overflow-hidden`.
 
 ### 2.2 Halaman Pembuatan Kado (`/create`)
-- Formulir terstruktur rapi ke dalam 5 seksi tematik berdimensi RPG:
-  1. **Seksi 01: Identitas & Pesan**: Nama Penerima (1–50 karakter) dan Surat Rahasia (1–500 karakter).
-  2. **Seksi 02: Karakter Pahlawan**: Avatar Cowok (Pendekar Biru) atau Cewek (Gaun & Pita Rose) dengan preview langsung kanvas tajam 64 px (skala 2×).
-  3. **Seksi 03: Foto Kenangan**: Dropzone retro keyboard-accessible (`tabIndex={0}`), drag-and-drop, validasi format JPG/PNG/WebP maks 10MB, dan tombol ganti/hapus foto.
-  4. **Seksi 04: Tantangan Kuis RPG (Opsional)**: Pembuat kuis interaktif (0 hingga 3 soal). Tiap soal memiliki pertanyaan (1–140 karakter), opsi unggah foto bantuan kuis, 4 pilihan jawaban (1–60 karakter) dengan pemilih radio kunci jawaban benar, serta hadiah buff (*Shield Aura*, *Speed Boost*, *Power Star*).
-  5. **Seksi 05: Musik Latar 8-Bit**: Tab preset (*Cozy Sunset*, *Happy Birthday*, *Starlight Lullaby*) dilengkapi tombol audio tester ▶ TES / ⏹ STOP, atau tab input tautan `.mp3` langsung protokol HTTPS.
-- **Validasi & Keamanan Input:**
-  - Urutan validasi visual: Nama → Pesan → Avatar → Foto → Kuis → Musik.
-  - Jika terjadi kesalahan input, halaman melakukan auto-scroll halus dan memfokuskan kursor ke elemen bermasalah pertama disertai notifikasi toast peringatan 3 detik.
-  - Tombol submit mendeteksi status upload foto soal dan dinonaktifkan sementara jika upload belum selesai.
-  - Generator ID menggunakan `makeId()` (mendukung `crypto.randomUUID` dengan fallback `crypto.getRandomValues`) yang disimpan di ref agar percobaan submit ulang bersifat idempoten (tidak menciptakan duplikat).
+- **Struktur RPG Quest Wizard (3 Langkah) + Live Preview Real-Time:**
+  1. **Langkah 1 (Penerima & Pesan):**
+     - Nama Penerima (1–50 karakter).
+     - Surat Rahasia (1–500 karakter).
+     - Pilihan Avatar Pahlawan: Cowok (Pendekar Biru) atau Cewek (Gaun & Pita Rose) dengan preview sprite interaktif.
+  2. **Langkah 2 (Foto & Musik):**
+     - Unggah Foto Kenangan: Dropzone retro responsif keyboard (`tabIndex={0}`), validasi format JPG/PNG/WebP maks 10MB, tombol ganti/hapus, serta auto-kompresi kanvas client-side.
+     - Musik Latar 8-Bit: Pilihan preset (*Cozy Sunset*, *Happy Birthday*, *Starlight Lullaby*) dilengkapi tombol audio tester ▶ TES / ⏹ STOP, atau opsi input tautan `.mp3` langsung HTTPS.
+  3. **Langkah 3 (Bonus & Bungkus):**
+     - Tantangan Kuis RPG (Opsional, 0–3 soal) lengkap dengan 4 opsi jawaban, kunci jawaban, dan hadiah buff (*Shield Aura*, *Speed Boost*, *Power Star*).
+     - Pesan Khusus 4 Bintang Kenangan (Opsional, maks 40 karakter per bintang) yang muncul saat bintang disentuh di Babak 1.
+     - Tombol final **"Bungkus Kado Sekarang"** dengan safe-area bottom padding (`pb-[max(2rem,env(safe-area-inset-bottom))]`).
+- **Live Preview Kartu Kado (Desktop `lg:`):**
+  Kolom kanan menampilkan kartu pratinjau real-time dengan bingkai piksel 9-slice emas, nama penerima, sprite avatar aktif, dan foto kenangan yang diunggah.
+- **Validasi Ramah & Estetik (Warm Amber):**
+  Menggantikan banner merah keras dengan notifikasi peringatan lembut (*warm amber* `#FBBF24` / `bg-amber-950/30` berlis 1px halus), auto-focus ke field pertama yang belum terisi saat tombol "Lanjut" ditekan, serta indikator kelengkapan yang tenang.
+- Generator ID menggunakan `makeId()` (idempoten via ref) untuk mencegah submit ganda.
 
 ### 2.3 Layar Mulai & Gameplay (`/play/[id]`)
 - **Pemuatan Awal:** Loader retro bertema peti kado. Jika kado tidak ditemukan, tampil layar 404 retro 8-bit lengkap dengan tombol buat kado baru.
-- **Start Screen Overlay (`z-30`):** Berfokus secara emosional dan elegan pada nama penerima kado, pita RPG `PixelRibbonBanner`, ilustrasi kado piksel 16-bit, dan tombol empuk **"⚔️ PRESS START"** (kotak *Panduan Kontrol* dipindahkan ke Slide 3 Prolog Storybook agar layar pembuka bersih dan fokus).
-- **Inisialisasi Audio & Alur Transisi:** Saat `PRESS START` ditekan, Web Audio API di-unlock seketika (sinkron gestur pengguna) dan alur langsung membuka **Prolog Storybook Cutscene (3 Slide HTML HD)** sebelum kontrol karakter aktif.
-- **Prolog Storybook Cutscene (`z-[290]`):** Rangkaian 3 slide buku cerita HTML HD yang memperkenalkan premis pencurian kado oleh Shadow Boss, keberadaan Partner di Pohon Besar, serta panduan kontrol visual lengkap (tersedia tombol *"Lewati"*).
-- **Kanvas Game (KAPLAY):** Kanvas game dimuat di latar belakang dengan skala terkunci 16:9, resolusi virtual Hi-Bit 480×270, rendering tajam anti-burik, dan pemantauan status inisialisasi (`loading`, `ready`, `error`).
-- **HUD Kiri Atas (`z-[260]`):** Indikator nyawa hati (`♥`), ikon perisai aktif, timer buff sepatu kilat, timer bintang sihir, dan koleksi bintang kenangan (⭐).
-- **HUD Kanan Atas (`z-[260]`):** Indikator progres kuis, tombol bisu suara (🔇/🔊), tombol jeda (Ⅱ/▶), tombol bantuan panduan (?), dan bar kemajuan level.
-- **Virtual D-Pad Mobile (`z-20`):** Otomatis aktif pada layar sentuh atau layar sempit (<768px). Menyediakan tombol arah Kiri, Kanan, Lompat, Serang (⚔️), dan Interaksi Kuis (💬).
-- **Dialog Kuis (`ChallengeModal`, `z-[300]`):** Terbuka saat pemain berinteraksi dengan NPC Kelinci (`npc_guide`). Game menjeda waktu; modal menampilkan soal, foto bantuan (bila ada), dan 4 opsi tombol. Menjawab benar langsung memberikan buff; menjawab salah mengurangi 1 nyawa hati (atau memicu respawn jika nyawa habis).
-- **Selebrasi Akhir:** Saat pemain menyentuh peti kado di ujung stage, kado berguncang selama 0.9 detik diiringi SFX fanfare perayaan, musik latar dihentikan, dan `GiftModal` terbuka.
+- **Start Screen Overlay (`z-30`):** Berfokus secara emosional dan elegan pada nama penerima kado, pita RPG `PixelRibbonBanner`, ilustrasi kado piksel 16-bit, dan tombol empuk **"⚔️ PRESS START"** dengan preloader jujur 0% → 100%.
+- **Inisialisasi Audio & Alur Transisi:** Saat `PRESS START` ditekan, Web Audio API di-unlock seketika (sinkron gestur pengguna) dan alur membuka **Prolog Live Cutscene JRPG (3 Adegan HTML HD, `z-[290]`)** sebelum kontrol karakter aktif.
+- **Prolog Live Cutscene JRPG (`z-[290]`):**
+  - Kotak dialog JRPG bawah layar berbingkai bevel emas dengan potret pembicara (Shadow Boss, Partner Canvas, Panduan).
+  - Menggunakan *2-Stage Typewriter State Machine* dengan `timerRef = useRef`:
+    - Klik atau tombol `Spasi`/`Enter` saat teks mengetik langsung membatalkan timer aktif dan memunculkan 100% teks kalimat tanpa melompati adegan.
+    - Klik / `Spasi` berikutnya baru memajukan ke adegan berikutnya.
+    - Dilengkapi `e.repeat` guard agar penekanan lama tidak memicu glitch.
+- **Kanvas Game (KAPLAY):**
+  - **Full-Viewport 16:9 Adaptive Scaling:** Membesar maksimal 100% mengikuti lebar atau tinggi viewport (`100vw` / `100dvh`) dengan rumus `Math.min(vw / 480, vh / 270)` tanpa batas integer sempit, menghilangkan bingkai gelap tebal di laptop/desktop.
+  - Resolusi virtual internal `480×270` piksel terkunci rasio 16:9 (`aspect-video`) dan filter CSS `image-rendering: pixelated;` tetap tajam.
+  - `overflow-hidden` dikunci khusus di rute `/play/[id]` agar gameplay full-screen imersif.
+- **HUD Kiri & Kanan Atas (`z-[260]`):** Indikator HP hati (`♥`), perisai, buff timer, progres kuis, dan tombol audio/jeda/bantuan.
+- **Banner Orientasi Mobile Portrait:** Banner "Putar layar Anda (Landscape disarankan)" diposisikan aman di bawah HUD (`top-14` / `top-16`) dengan fitur auto-dismiss setelah 4 detik dan `pointer-events-none`.
+- **Virtual D-Pad Mobile (`z-20`):** Otomatis aktif pada layar sentuh/sempit. Terletak nyaman di zona ibu jari bawah tanpa menutupi karakter gameplay.
+- **Dialog Kuis (`ChallengeModal`, `z-[300]`):** Terbuka saat interaksi dengan NPC Kelinci. Game menjeda waktu; timer feedback 1.2s dibersihkan aman pada unmount. Menjawab benar memberi buff; salah mengurangi 1 HP.
+- **Dialog Reuni (`ReunionModal`, `z-[290]`):** Terbuka saat mendekati Partner di Pohon Sakura dengan *2-Stage Typewriter State Machine* instan skip yang bebas race condition.
+- **Selebrasi Akhir:** Saat Boss dikalahkan dan peti kado disentuh, kado berguncang diiringi fanfare dan `GiftModal` terbuka.
 
 ### 2.4 Modal Kado & Unduh Kartu (.PNG)
 - **GiftModal (`z-[400]`):** Tampil di atas seluruh lapisan game dengan efek taburan konfeti.
 - **Polaroid Foto Kenangan:** Foto kenangan ditampilkan di dalam frame polaroid miring 1 derajat bertekstur kertas album klasik.
-- **Animasi Mesin Tik:** Surat kado dimainkan dengan kecepatan 25 ms/karakter menggunakan algoritma pemecah kode poin UTF-8 (`Array.from`), memastikan seluruh karakter emoji (seperti 🎁, ✨, ❤️) tidak pernah terpotong atau rusak. Tersedia tombol lewati animasi.
+- **Animasi Mesin Tik Bebas Glitch:**
+  - Kalimat surat dimainkan dengan interval 25 ms/karakter (kode poin aman UTF-8 `Array.from`).
+  - Timer disimpan di `typewriterTimerRef = useRef` sehingga tombol `[Lewati Animasi ▶▶]`, klik langsung pada panel perkamen, atau tombol keyboard `Spasi`/`Enter`/`Esc` langsung membatalkan timer seketika dan menampilkan 100% teks tanpa rewind glitch.
 - **Ekspor Kartu Kado Museum-Grade (`handleSaveCard`):**
   - Menghasilkan gambar `.png` resolusi tinggi (800 × 1140 piksel) siap cetak/simpan ke galeri ponsel.
   - Menunggu `document.fonts.ready` agar tipografi ter-render sempurna.
   - Membagi paragraf teks per baris baru (`\n`) dan memotong kata panjang secara otomatis agar tidak keluar batas kotak surat.
   - Menyertakan deteksi proteksi CORS pada gambar eksternal dengan fallback pesan informatif dan ilustrasi kado emas.
-  - Memuat cap resmi *"QUEST CLEARED 100% COMPLETE"* dan tanggal digital archive.
+  - Memuat stempel prangko mini *"MOMEN PETUALANGAN"* hasil snapshot kanvas kemenangan, cap resmi *"QUEST CLEARED 100% COMPLETE"*, dan tanggal arsip digital.
 
 ---
 
@@ -244,8 +262,12 @@ export interface NormalizedGiftData {
 - **Gravitasi Dunia:** 800 px/s².
 - **Kecepatan Lari:** 100 px/s (Normal) / 135 px/s (Speed Buff).
 - **Kekuatan Lompat:** -300 px/s (Menghasilkan tinggi lompatan ~56.25 px).
-- **Skala Kanvas Anti-Burik (`computeScale`):**
-  Kanvas dirender pada resolusi virtual internal `480×270` lalu diskalakan ke layar menggunakan bilangan pengali integer atau proporsional terdekat dengan filter CSS `image-rendering: pixelated;`.
+- **Penskalaan Full-Viewport 16:9 Adaptif (`computeScale`):**
+  - Kanvas dirender pada resolusi virtual internal `480×270` piksel dan diperbesar adaptif mengikuti rumus `scale = Math.min(viewportWidth / 480, viewportHeight / 270)`.
+  - Mengunci rasio 16:9 (`aspect-video`) secara presisi tanpa memotong konten dan tanpa bingkai gelap tebal di keempat sisi pada layar Laptop maupun Desktop.
+  - Mempertahankan CSS `image-rendering: pixelated;` sehingga setiap piksel 16-bit tetap tajam sempurna pada layar Retina / High-DPI.
+  - Pada Mobile Portrait (`390×844`), kanvas membentang 100% penuh kiri-kanan, sedangkan Virtual D-Pad berada rapi di zona ibu jari bawah layar.
+  - Pada Mobile Landscape (`844×390`), kanvas memenuhi viewport secara imersif dengan HUD proporsional di sudut layar.
 
 ### 4.2 Struktur Level & Rintangan Atap Kota
 Level membentang sepanjang 1900 piksel dengan pola tanah bertingkat (`getFloorYAt(x)`):
@@ -801,3 +823,41 @@ Fokus pada kedekatan emosional, rahasia manis, dan kenangan kado yang abadi:
    - Pada halaman `/create`, tambahkan akordeon opsional: **"Pesan Khusus di Tiap Bintang Kenangan (Opsional)"** berisi 4 baris input teks pendek (maks 40 karakter per bintang).
    - Jika diisi, saat pemain menyentuh Bintang Kenangan 1, 2, 3, dan 4 di Babak 1, toast notifikasi menampilkan pesan khusus pembuat kado (misal: *"Kenangan pertama kita di bioskop"*). Jika dikosongkan, sistem memakai pesan default yang sudah ada.
    - **Kompatibilitas Database Bersih:** Data disimpan di kolom ke-9 (Kolom I) Google Sheets sebagai string JSON `memory_messages` tanpa mengubah urutan atau struktur Kolom A–H yang sudah ada. Kado lama v1–v4 tetap berjalan 100% dengan teks default.
+
+---
+
+## 11. Changelog & Arsitektur Stabil Terkini (v5.1 Post-Audit Enhancements)
+
+Versi 5.1 adalah hasil integrasi menyeluruh dan pengujian otomatis *end-to-end* (Playwright WebApp Testing + Antislop UI/UX) yang memastikan proyek memenuhi standar industri tertinggi, siap pakai secara publik, dan bebas regresi:
+
+### 11.1 Pemulihan Aksesibilitas Scroll & Tata Letak Rute
+- **Pemisahan Kuncian Viewport:** Menghapus `overflow-hidden` global dari `layout.tsx`, `page.tsx`, dan `create/page.tsx`. Halaman Beranda (`/`) dan Formulir (`/create`) kini memiliki tinggi fleksibel `min-h-dvh` dan dapat di-scroll dengan sangat halus (*smooth native scroll*) di seluruh resolusi layar (Desktop, Laptop, Tablet, dan Mobile).
+- **Isolasi Viewport Game:** Pembatasan `overflow-hidden` dikunci secara eksklusif hanya pada rute `/play/[id]` agar kanvas KAPLAY dan elemen kontrol on-screen tetap stabil tanpa scroll samping yang tidak disengaja.
+
+### 11.2 Redesign Beranda Starlight Keepsake (Hero Split)
+- Mengubah tata letak kotak tunggal lama menjadi **Hero Split 2 Kolom**:
+  - Sisi Kiri: Tipografi judul retro modern *Starlight Keepsake*, deskripsi bernada hangat, dan 2 tombol CTA jelas ("Buat Kado Sekarang" & "Coba Demo").
+  - Sisi Kanan: Bingkai pratinjau kanvas 16-bit asli yang memanfaatkan aset internal proyek (`bg_city_mid`, karakter, kado).
+- Menambahkan bagian panduan 3 langkah petualangan di bawah hero dengan kontras tinggi dan ukuran font yang nyaman dibaca di layar HP.
+
+### 11.3 Redesign Formulir Quest Wizard 3 Langkah & Live Preview
+- **Wizard 3 Langkah:** Membagi formulir panjang menjadi 3 tahap terfokus (Langkah 1: Identitas & Pesan; Langkah 2: Foto & Musik; Langkah 3: Kuis & Bonus) dengan bar progres retro yang bersih.
+- **Live Preview Kartu Kado Real-Time:** Menghadirkan kolom pratinjau langsung di sebelah form (layar Desktop `lg:`) yang menampilkan nama penerima, sprite avatar pilihan, dan foto kenangan secara dinamis saat pengguna mengetik.
+- **Validasi Lembut (*Soft Amber Alert*):** Menghapus border merah keras dan banner error yang agresif, menggantinya dengan aksen *warm amber* (`#FBBF24` / `bg-amber-950/30` lis halus), auto-focus ke kolom yang belum diisi saat tombol "Lanjut" ditekan, serta ringkasan kelengkapan yang tenang.
+- **Safe-Area Padding Mobile:** Menambahkan padding bawah aman `pb-[max(2rem,env(safe-area-inset-bottom))]` agar tombol submit tidak tertutup bar navigasi iPhone/Android.
+
+### 11.4 Penskalaan Kanvas Full-Viewport 16:9 Adaptif
+- Memperbarui logika penskalaan di `GameCanvas.tsx` dari *integer scaling* kaku menjadi **Full-Viewport 16:9 Adaptif**:
+  $$\text{scale} = \min\left(\frac{\text{vw}}{480}, \frac{\text{vh}}{270}\right)$$
+- Kanvas membesar maksimal hingga batas 100% viewport (`100vw` / `100dvh`), mengeliminasi bingkai gelap tebal di keempat sisi pada layar laptop maupun desktop tanpa memotong konten dan tanpa distorsi rasio 16:9.
+
+### 11.5 State Machine Typewriter 2-Tahap JRPG (Zero Race Condition)
+- Memperbaiki bug glitch pengetikan pada seluruh modal dialog (`PrologueModal.tsx`, `ReunionModal.tsx`, `GiftModal.tsx`):
+  - ID timer disimpan di dalam `useRef` terpisah (`timerRef`, `typewriterTimerRef`).
+  - **Tahap 1 (Saat Mengetik):** Menekan tombol `Spasi`, `Enter`, atau mengklik kotak dialog langsung membatalkan timer aktif (`clearInterval`), mengubah status ke selesai, dan menampilkan 100% teks seketika tanpa melompati adegan.
+  - **Tahap 2 (Saat Teks Penuh):** Input berikutnya baru melanjutkan ke adegan dialog selanjutnya atau menutup modal.
+  - Proteksi `e.repeat` ditambahkan pada event listener keyboard untuk mencegah pemicuan ganda saat tombol ditahan.
+  - `ChallengeModal.tsx` dilengkapi pembersihan timer feedback 1200ms saat unmount agar bebas dari kebocoran memori.
+
+### 11.6 Penyesuaian HUD & Banner Orientasi Mobile
+- Memindahkan posisi banner instruksi orientasi `"Putar layar Anda (Landscape disarankan)"` ke `top-14` / `top-16` tepat di bawah kapsul HUD atas di layar potret ponsel, dengan `pointer-events-none` dan fitur **auto-dismiss setelah 4 detik** (lengkap dengan cleanup timeout).
