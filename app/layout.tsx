@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Kado Digital 8-Bit | Petualangan Hadiah Retro Spesial",
+  title: "Starlight Keepsake | Petualangan Kado Digital 16-Bit",
   description:
-    "Kirimkan kado digital interaktif bernuansa indie RPG 16-bit untuk sahabat, pasangan, atau keluarga. Mainkan quest-nya, pecahkan tantangannya, dan buka kejutan terindahnya!",
+    "Kirimkan kado digital personal bernuansa Action-RPG 16-bit HD-2D untuk sahabat, pasangan, atau keluarga. Jelajahi atap senja, pecahkan kuis rahasia, dan buka kejutan terindah!",
 };
 
 export default function RootLayout({
@@ -13,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className="h-full">
+    <html lang="id" className="min-h-full">
       <head>
         <meta name="theme-color" content="#121324" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />

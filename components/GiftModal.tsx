@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import confetti from "canvas-confetti";
 import RetroButton from "./RetroButton";
@@ -37,6 +37,7 @@ export default function GiftModal({
   const [imageError, setImageError] = useState(false);
   const [isSavingCard, setIsSavingCard] = useState(false);
   const [cardFeedback, setCardFeedback] = useState<string | null>(null);
+  const typewriterTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Efek konfeti saat modal pertama kali terbuka
   useEffect(() => {
@@ -53,25 +54,57 @@ export default function GiftModal({
 
   // Efek mesin tik (D6: menggunakan kode poin Array.from agar emoji tidak rusak)
   useEffect(() => {
+    if (typewriterTimerRef.current) {
+      clearInterval(typewriterTimerRef.current);
+      typewriterTimerRef.current = null;
+    }
+
     const characters = Array.from(messageText);
     let index = 0;
 
-    const timer = setInterval(() => {
+    typewriterTimerRef.current = setInterval(() => {
       index++;
       setDisplayedText(characters.slice(0, index).join(""));
       if (index >= characters.length) {
         setIsTypingComplete(true);
-        clearInterval(timer);
+        if (typewriterTimerRef.current) {
+          clearInterval(typewriterTimerRef.current);
+          typewriterTimerRef.current = null;
+        }
       }
     }, 25);
 
-    return () => clearInterval(timer);
+    return () => {
+      if (typewriterTimerRef.current) {
+        clearInterval(typewriterTimerRef.current);
+        typewriterTimerRef.current = null;
+      }
+    };
   }, [messageText]);
 
-  const handleSkipTyping = () => {
+  // Fungsi lewati animasi ketikan secara instan dan aman dari race condition
+  const handleSkipTyping = useCallback(() => {
+    if (typewriterTimerRef.current) {
+      clearInterval(typewriterTimerRef.current);
+      typewriterTimerRef.current = null;
+    }
     setDisplayedText(messageText);
     setIsTypingComplete(true);
-  };
+  }, [messageText]);
+
+  // Dukungan navigasi keyboard: Spasi / Enter / Esc untuk lewati animasi ketikan surat
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      if (!isTypingComplete && (e.key === " " || e.key === "Enter" || e.key === "Escape")) {
+        e.preventDefault();
+        handleSkipTyping();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isTypingComplete, handleSkipTyping]);
 
   // Render dan Unduh Kartu Pos / Polaroid 16-Bit Museum Grade
   // Sesuai panduan visual PRD.md Bagian 2.4 & Bagian 6
@@ -508,7 +541,13 @@ export default function GiftModal({
         </div>
 
         {/* Pesan Kado: Panel Surat Parchment (Efek Mesin Tik dengan Font Sangat Nyaman Dibaca) */}
-        <div className="rpg-parchment-inset p-4 sm:p-5 mb-5 min-h-[110px] rounded-xs relative">
+        <div
+          onClick={!isTypingComplete ? handleSkipTyping : undefined}
+          className={`rpg-parchment-inset p-4 sm:p-5 mb-5 min-h-[110px] rounded-xs relative ${
+            !isTypingComplete ? "cursor-pointer" : ""
+          }`}
+          title={!isTypingComplete ? "Klik atau tekan Spasi untuk lewati animasi" : undefined}
+        >
           <div className="flex items-center gap-1.5 mb-2 font-pixel text-[9px] text-[#8b5e1b] uppercase">
             <PixelScroll size={13} className="text-[#8b5e1b] shrink-0" />
             <span>Surat Pribadi:</span>

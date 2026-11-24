@@ -22,6 +22,8 @@ export default function ReunionModal({
 }: ReunionModalProps) {
   const partnerAvatar: AvatarGender = avatar === "female" ? "male" : "female";
   const partnerCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const displayedCountRef = useRef<number>(0);
 
   const dialogueText =
     "Kamu akhirnya sampai! Kado spesialmu ada di depan sana, tapi Penjaga Kado menghalangi jalan. Ayo kita hadapi bersama!";
@@ -38,9 +40,17 @@ export default function ReunionModal({
 
   // Efek Typewriter (~28ms per karakter) + SFX retro blip tiap 2 karakter
   useEffect(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
     let charIdx = 0;
-    const timer = setInterval(() => {
+    displayedCountRef.current = 0;
+
+    timerRef.current = setInterval(() => {
       charIdx++;
+      displayedCountRef.current = charIdx;
       setDisplayedCount(charIdx);
 
       if (charIdx % 2 === 0 && !isMuted) {
@@ -52,25 +62,43 @@ export default function ReunionModal({
       }
 
       if (charIdx >= chars.length) {
-        clearInterval(timer);
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
       }
     }, 28);
 
-    return () => clearInterval(timer);
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
   }, [chars.length, isMuted]);
 
-  // Navigasi pintar: klik saat mengetik -> selesaikan; saat selesai -> selesai
+  // Navigasi pintar: klik saat mengetik -> selesaikan; saat selesai -> lanjut ke tahap berikutnya
   const handleAdvance = useCallback(() => {
-    if (isTyping) {
+    // Tahap 1: Jika masih mengetik, batalkan timer aktif dan tampilkan 100% teks seketika
+    if (timerRef.current !== null || displayedCountRef.current < chars.length) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      displayedCountRef.current = chars.length;
       setDisplayedCount(chars.length);
-    } else {
-      onComplete();
+      return;
     }
-  }, [isTyping, chars.length, onComplete]);
 
-  // Keyboard navigation
+    // Tahap 2: Teks sudah tampil penuh, selesaikan modal reuni
+    onComplete();
+  }, [chars.length, onComplete]);
+
+  // Keyboard navigation (Spasi / Enter / Panah Kanan untuk lanjut, Esc untuk lewati)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+
       if (e.key === "Escape") {
         e.preventDefault();
         onComplete();

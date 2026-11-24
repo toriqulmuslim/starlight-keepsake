@@ -14,6 +14,8 @@ import {
   PixelAudio,
   PixelSparkle,
   PixelStar,
+  PixelHeart,
+  PixelArrow,
 } from "./PixelIcons";
 import {
   validateReceiverName,
@@ -35,7 +37,7 @@ function makeId(): string {
     try {
       return crypto.randomUUID();
     } catch {
-      // Fallback untuk insecure context / IP LAN
+      // Fallback
     }
   }
   if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
@@ -60,6 +62,11 @@ const PRESET_BGM_OPTIONS = [
 ];
 
 export default function CreateForm() {
+  // State Wizard Langkah (1, 2, atau 3)
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+  const [showMobilePreview, setShowMobilePreview] = useState(false);
+
+  // Form States
   const [receiverName, setReceiverName] = useState("");
   const [messageText, setMessageText] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -80,10 +87,10 @@ export default function CreateForm() {
   const [isPlayingTestAudio, setIsPlayingTestAudio] = useState(false);
   const testAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // File input ref untuk custom dropzone
+  // File input ref
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // ID Kado persistent antar percobaan (D4)
+  // ID Kado persistent antar percobaan submit
   const giftIdRef = useRef<string | null>(null);
 
   // State sukses
@@ -93,6 +100,7 @@ export default function CreateForm() {
   // Ref kanvas preview avatar
   const maleCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const femaleCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const livePreviewAvatarCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     if (maleCanvasRef.current) {
@@ -101,7 +109,10 @@ export default function CreateForm() {
     if (femaleCanvasRef.current) {
       drawAvatarPreview(femaleCanvasRef.current, "female");
     }
-  }, [createdGiftId]);
+    if (livePreviewAvatarCanvasRef.current) {
+      drawAvatarPreview(livePreviewAvatarCanvasRef.current, avatar);
+    }
+  }, [avatar, currentStep, showMobilePreview]);
 
   // State submit & progress
   const [statusText, setStatusText] = useState<string | null>(null);
@@ -119,7 +130,10 @@ export default function CreateForm() {
   const [toast, setToast] = useState<string | null>(null);
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Bersihkan toast timer, audio preview, dan object URL saat unmount
+  // Cache URL foto yang sudah berhasil terunggah
+  const [cachedUploadedImageUrl, setCachedUploadedImageUrl] = useState<string | null>(null);
+
+  // Cleanup effect
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -142,13 +156,10 @@ export default function CreateForm() {
     }, 3000);
   };
 
-  // State cache image url jika GAS gagal agar tidak upload ulang
-  const [cachedUploadedImageUrl, setCachedUploadedImageUrl] = useState<string | null>(null);
-
-  // Handle pilih gambar
+  // Upload Foto
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
-    e.target.value = ""; // Reset value agar file yang sama bisa dipilih ulang (D4)
+    e.target.value = "";
     if (!file) return;
 
     const validation = validateImageFile(file);
@@ -163,7 +174,7 @@ export default function CreateForm() {
     }
 
     setImageFile(file);
-    setCachedUploadedImageUrl(null); // Reset cache foto jika user ganti file
+    setCachedUploadedImageUrl(null);
     setFieldErrors((prev) => ({ ...prev, image: undefined }));
     const previewUrl = URL.createObjectURL(file);
     imagePreviewRef.current = previewUrl;
@@ -182,7 +193,7 @@ export default function CreateForm() {
     setFieldErrors((prev) => ({ ...prev, image: "Foto Kenangan wajib diunggah!" }));
   };
 
-  // Handle audio preview (Tes Lagu)
+  // Preview Audio
   const handleTogglePresetPreview = (presetId: string) => {
     if (previewingPreset === presetId) {
       stopBgm();
@@ -219,36 +230,36 @@ export default function CreateForm() {
       return;
     }
 
-    if (testAudioRef.current) {
-      testAudioRef.current.pause();
-    }
-
     const audio = new Audio(musicUrl.trim());
     testAudioRef.current = audio;
+    audio.volume = 0.5;
 
     audio
       .play()
       .then(() => {
         setIsPlayingTestAudio(true);
+        setFieldErrors((prev) => ({ ...prev, music: undefined }));
       })
-      .catch(() => {
-        showToast("Gagal memutar audio. Pastikan URL langsung ke file .mp3 dan mendukung HTTPS.");
-        setFieldErrors((prev) => ({ ...prev, music: "Gagal memutar audio .mp3" }));
+      .catch((err) => {
+        console.warn("Gagal memutar audio test:", err);
+        setFieldErrors((prev) => ({
+          ...prev,
+          music: "Gagal memutar tautan audio. Pastikan file dapat diakses secara publik.",
+        }));
         setIsPlayingTestAudio(false);
       });
 
-    audio.onended = () => {
-      setIsPlayingTestAudio(false);
-    };
-
+    audio.onended = () => setIsPlayingTestAudio(false);
     audio.onerror = () => {
-      showToast("Format atau link audio tidak dapat diputar.");
-      setFieldErrors((prev) => ({ ...prev, music: "Format atau link audio tidak dapat diputar" }));
+      setFieldErrors((prev) => ({
+        ...prev,
+        music: "Format audio tidak didukung atau tautan tidak valid.",
+      }));
       setIsPlayingTestAudio(false);
     };
   };
 
-  // Handle Quiz Builder actions (D3: gunakan id dan functional updater)
+  // --- KUIS BUILDER HANDLERS ---
   const handleAddChallenge = () => {
     if (challenges.length >= 3) return;
     const newChallenge: ChallengeItem = {
@@ -261,160 +272,194 @@ export default function CreateForm() {
     setChallenges((prev) => [...prev, newChallenge]);
   };
 
-  const handleRemoveChallenge = (id: string) => {
-    setChallenges((prev) => prev.filter((c) => c.id !== id));
+  const handleRemoveChallenge = (index: number) => {
+    setChallenges((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleChallengeChange = (id: string, field: keyof ChallengeItem, value: unknown) => {
-    setChallenges((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, [field]: value } : c))
-    );
+  const handleChallengeChange = <K extends keyof ChallengeItem>(
+    index: number,
+    field: K,
+    value: ChallengeItem[K]
+  ) => {
+    setChallenges((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
   };
 
-  const handleOptionChange = (id: string, optionIndex: number, value: string) => {
-    setChallenges((prev) =>
-      prev.map((c) => {
-        if (c.id !== id) return c;
-        const newOptions: [string, string, string, string] = [...c.options];
-        newOptions[optionIndex] = value;
-        return { ...c, options: newOptions };
-      })
-    );
+  const handleChallengeOptionChange = (
+    challengeIndex: number,
+    optionIndex: number,
+    value: string
+  ) => {
+    setChallenges((prev) => {
+      const next = [...prev];
+      const nextOptions = [...next[challengeIndex].options] as [
+        string,
+        string,
+        string,
+        string,
+      ];
+      nextOptions[optionIndex] = value;
+      next[challengeIndex] = { ...next[challengeIndex], options: nextOptions };
+      return next;
+    });
   };
 
-  const handleUploadChallengePhoto = async (id: string, file: File) => {
-    const v = validateImageFile(file);
-    if (!v.isValid) {
-      showToast(v.error || "File foto kuis tidak valid");
+  const handleChallengePhotoUpload = async (
+    challengeIndex: number,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    const vImg = validateImageFile(file);
+    if (!vImg.isValid) {
+      showToast(vImg.error || "File foto bantuan kuis tidak valid");
       return;
     }
-    setUploadingChallengePhotoIds((prev) => ({ ...prev, [id]: true }));
+
+    const cId = challenges[challengeIndex]?.id;
+    if (!cId) return;
+
+    setUploadingChallengePhotoIds((prev) => ({ ...prev, [cId]: true }));
     try {
-      const url = await uploadImageToImgBB(file);
-      // Update berbasis id; bila soal sudah dihapus sebelum selesai upload, tidak akan merusak state
-      setChallenges((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, imageUrl: url } : c))
+      showToast("Mengunggah foto bantuan kuis...");
+      const uploadedUrl = await uploadImageToImgBB(file);
+      handleChallengeChange(challengeIndex, "imageUrl", uploadedUrl);
+      showToast("Foto bantuan kuis berhasil disematkan!");
+    } catch (err) {
+      showToast(
+        err instanceof Error
+          ? err.message
+          : "Gagal mengunggah foto bantuan kuis."
       );
-    } catch {
-      showToast("Gagal mengunggah foto kuis. Coba lagi atau periksa koneksi.");
     } finally {
-      setUploadingChallengePhotoIds((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
+      setUploadingChallengePhotoIds((prev) => ({ ...prev, [cId]: false }));
     }
   };
 
-  // Submit Handler (D4: Urutan validasi mengikuti urutan visual)
-  const validateForm = (): boolean => {
-    const errors: {
-      receiverName?: string;
-      messageText?: string;
-      avatar?: string;
-      image?: string;
-      challenges?: string;
-      memoryMessages?: string;
-      music?: string;
-    } = {};
+  const handleChallengePhotoRemove = (challengeIndex: number) => {
+    handleChallengeChange(challengeIndex, "imageUrl", undefined);
+  };
 
-    // 1. Nama
+  // --- VALIDASI PER LANGKAH ---
+  const validateStep1 = (): boolean => {
+    const errors: typeof fieldErrors = {};
+
     const vName = validateReceiverName(receiverName);
-    if (!vName.isValid) {
-      errors.receiverName = vName.error;
-    }
+    if (!vName.isValid) errors.receiverName = vName.error;
 
-    // 2. Pesan
     const vMsg = validateMessageText(messageText);
-    if (!vMsg.isValid) {
-      errors.messageText = vMsg.error;
-    }
+    if (!vMsg.isValid) errors.messageText = vMsg.error;
 
-    // 3. Avatar
     const vAvatar = validateAvatar(avatar);
-    if (!vAvatar.isValid) {
-      errors.avatar = vAvatar.error;
-    }
+    if (!vAvatar.isValid) errors.avatar = vAvatar.error;
 
-    // 4. Foto Kenangan (Wajib saat membuat kado)
-    if (!cachedUploadedImageUrl && !imageFile) {
-      errors.image = "Foto Kenangan wajib diunggah!";
-    } else if (imageFile) {
-      const vImg = validateImageFile(imageFile);
-      if (!vImg.isValid) {
-        errors.image = vImg.error;
-      }
-    }
+    setFieldErrors((prev) => ({ ...prev, ...errors }));
 
-    // 5. Kuis
-    const vChallenges = validateChallenges(challenges);
-    if (!vChallenges.isValid) {
-      errors.challenges = vChallenges.error;
-    }
-
-    // 5b. Pesan Bintang Kenangan (Opsional)
-    const activeMemories = memoryMessages.filter((m) => m.trim().length > 0);
-    const vMemories = validateMemoryMessages(activeMemories);
-    if (!vMemories.isValid) {
-      errors.memoryMessages = vMemories.error;
-    }
-
-    // 6. Musik
-    const finalMusicUrl = musicType === "preset" ? selectedPreset : musicUrl.trim();
-    const vMusic = validateMusicUrl(finalMusicUrl);
-    if (!vMusic.isValid) {
-      errors.music = vMusic.error;
-    }
-
-    setFieldErrors(errors);
-
-    const errorKeys = Object.keys(errors) as (keyof typeof errors)[];
-    if (errorKeys.length > 0) {
-      // Ambil error pertama untuk toast dan focus
-      const firstKey = errorKeys[0];
-      const firstErrorMessage =
-        errors[firstKey] || "Mohon lengkapi formulir sebelum membungkus kado!";
-      showToast(firstErrorMessage);
-      setErrorMessage(firstErrorMessage);
-
-      // Urutan scroll visual: receiverName -> messageText -> avatar-section -> photo-dropzone -> quiz-section -> musicUrl
-      const elementIdMap: Record<string, string> = {
-        receiverName: "receiverName",
-        messageText: "messageText",
-        avatar: "avatar-section",
-        image: "photo-dropzone",
-        challenges: "quiz-section",
-        music: "musicUrl",
-      };
-
-      const targetId = elementIdMap[firstKey];
-      if (targetId && typeof document !== "undefined") {
-        const el = document.getElementById(targetId);
-        if (el) {
-          const prefersReducedMotion =
-            typeof window !== "undefined" &&
-            window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-          el.scrollIntoView({
-            behavior: prefersReducedMotion ? "auto" : "smooth",
-            block: "center",
-          });
-          if (el instanceof HTMLElement) {
-            el.focus({ preventScroll: true });
-          }
-        }
+    if (Object.keys(errors).length > 0) {
+      const firstKey = Object.keys(errors)[0];
+      const targetId = firstKey === "receiverName" ? "receiverName" : firstKey === "messageText" ? "messageText" : "avatar-section";
+      const el = document.getElementById(targetId);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.focus();
       }
       return false;
     }
 
-    setErrorMessage(null);
+    setFieldErrors((prev) => ({
+      ...prev,
+      receiverName: undefined,
+      messageText: undefined,
+      avatar: undefined,
+    }));
     return true;
   };
 
+  const validateStep2 = (): boolean => {
+    const errors: typeof fieldErrors = {};
+
+    if (!imageFile && !cachedUploadedImageUrl) {
+      errors.image = "Foto Kenangan wajib diunggah agar kado memiliki visual spesial!";
+    }
+
+    const finalMusicUrl = musicType === "preset" ? selectedPreset : musicUrl.trim();
+    const vMusic = validateMusicUrl(finalMusicUrl);
+    if (!vMusic.isValid) errors.music = vMusic.error;
+
+    setFieldErrors((prev) => ({ ...prev, ...errors }));
+
+    if (Object.keys(errors).length > 0) {
+      const firstKey = Object.keys(errors)[0];
+      const targetId = firstKey === "image" ? "photo-dropzone" : "musicUrl";
+      const el = document.getElementById(targetId);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.focus();
+      }
+      return false;
+    }
+
+    setFieldErrors((prev) => ({ ...prev, image: undefined, music: undefined }));
+    return true;
+  };
+
+  const validateStep3 = (): boolean => {
+    const errors: typeof fieldErrors = {};
+
+    const vChallenges = validateChallenges(challenges);
+    if (!vChallenges.isValid) errors.challenges = vChallenges.error;
+
+    const vMem = validateMemoryMessages(memoryMessages);
+    if (!vMem.isValid) errors.memoryMessages = vMem.error;
+
+    setFieldErrors((prev) => ({ ...prev, ...errors }));
+
+    if (Object.keys(errors).length > 0) {
+      return false;
+    }
+
+    setFieldErrors((prev) => ({ ...prev, challenges: undefined, memoryMessages: undefined }));
+    return true;
+  };
+
+  // Navigasi Antar Langkah
+  const handleNextToStep2 = () => {
+    if (validateStep1()) {
+      setCurrentStep(2);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handleNextToStep3 = () => {
+    if (validateStep2()) {
+      setCurrentStep(3);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  // SUBMIT FINAL
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting || isAnyChallengeUploading) return;
 
-    // Stop audio preview jika sedang aktif
+    if (!validateStep1()) {
+      setCurrentStep(1);
+      return;
+    }
+    if (!validateStep2()) {
+      setCurrentStep(2);
+      return;
+    }
+    if (!validateStep3()) {
+      return;
+    }
+
+    // Stop tester audio
     if (testAudioRef.current) {
       testAudioRef.current.pause();
       setIsPlayingTestAudio(false);
@@ -424,31 +469,24 @@ export default function CreateForm() {
       setPreviewingPreset(null);
     }
 
-    // Validasi form lengkap sebelum memicu request apapun
-    if (!validateForm()) {
-      return;
-    }
-
     const finalMusicUrl = musicType === "preset" ? selectedPreset : musicUrl.trim();
     setIsSubmitting(true);
+    setErrorMessage(null);
 
     try {
-      // 1. Upload ke ImgBB jika belum terupload
       let finalImageUrl = cachedUploadedImageUrl;
       if (!finalImageUrl && imageFile) {
-        setStatusText("Mengunggah foto kado...");
+        setStatusText("Mengompres & mengunggah foto kado...");
         finalImageUrl = await uploadImageToImgBB(imageFile);
         setCachedUploadedImageUrl(finalImageUrl);
       }
 
-      // 2. Generate / gunakan ID yang disimpan di ref agar percobaan ulang idempoten (D4)
       if (!giftIdRef.current) {
         giftIdRef.current = makeId();
       }
       const giftId = giftIdRef.current;
 
-      // 3. Simpan ke Google Apps Script
-      setStatusText("Menyimpan kado...");
+      setStatusText("Menyimpan kado ke server...");
       await createGift({
         id: giftId,
         receiver_name: receiverName.trim(),
@@ -471,7 +509,6 @@ export default function CreateForm() {
           : undefined,
       });
 
-      // 4. Sukses
       setCreatedGiftId(giftId);
     } catch (err) {
       setErrorMessage(
@@ -485,7 +522,7 @@ export default function CreateForm() {
     }
   };
 
-  // Copy link handler dengan fallback
+  // Salin Tautan
   const handleCopyLink = () => {
     if (!createdGiftId) return;
     const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -494,35 +531,16 @@ export default function CreateForm() {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard
         .writeText(giftLink)
-        .then(() => triggerCopySuccess())
-        .catch(() => fallbackCopy(giftLink));
+        .then(() => {
+          setCopiedLink(true);
+          setTimeout(() => setCopiedLink(false), 2000);
+        })
+        .catch(() => alert(`Salin tautan ini: ${giftLink}`));
     } else {
-      fallbackCopy(giftLink);
+      alert(`Salin tautan ini: ${giftLink}`);
     }
   };
 
-  const fallbackCopy = (text: string) => {
-    try {
-      const textArea = document.createElement("textarea");
-      textArea.value = text;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textArea);
-      triggerCopySuccess();
-    } catch {
-      alert(`Salin link ini secara manual: ${text}`);
-    }
-  };
-
-  const triggerCopySuccess = () => {
-    setCopiedLink(true);
-    setTimeout(() => {
-      setCopiedLink(false);
-    }, 2000);
-  };
-
-  // Reset form untuk buat kado baru
   const handleReset = () => {
     giftIdRef.current = null;
     setReceiverName("");
@@ -535,9 +553,12 @@ export default function CreateForm() {
     setCachedUploadedImageUrl(null);
     setCreatedGiftId(null);
     setErrorMessage(null);
+    setCurrentStep(1);
   };
 
-  // Tampilan SUKSES setelah kado dibuat
+  // =========================================================================
+  // TAMPILAN SUKSES PENERBITAN KADO
+  // =========================================================================
   if (createdGiftId) {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const playUrl = `${origin}/play/${createdGiftId}`;
@@ -548,32 +569,28 @@ export default function CreateForm() {
     return (
       <div className="w-full max-w-xl mx-auto rpg-box-golden p-6 md:p-10 text-center animate-fade-in relative z-10">
         <div className="inline-block p-4 bg-amber-400/10 rounded-full border border-amber-400/30 mb-4 animate-bounce">
-          <PixelGift size={44} className="text-[#ffd166] drop-shadow-[0_4px_12px_rgba(255,209,102,0.4)]" />
+          <PixelGift size={48} />
         </div>
 
-        <div className="rpg-badge bg-emerald-950/80 text-emerald-300 border-emerald-400/40 mb-3 mx-auto flex items-center justify-center gap-1.5">
-          <PixelCheck size={12} className="text-emerald-300" />
-          <span>QUEST BERHASIL DITERBITKAN</span>
-        </div>
-
-        <h2 className="font-pixel text-base md:text-xl text-[#ffbe3b] mb-3 drop-shadow-[2px_2px_0_#000]">
-          KADO SIAP DIBUKA!
+        <h2 className="font-pixel text-base md:text-xl text-[#ffd166] mb-2 tracking-wide">
+          KADO BERHASIL DIBUNGKUS!
         </h2>
-
-        <p className="font-sans text-xs sm:text-sm text-slate-300 mb-6 leading-relaxed max-w-md mx-auto">
-          Tautan kado untuk <strong className="text-white font-semibold">{receiverName}</strong> telah aktif. Bagikan tautan ini agar dia bisa memainkan quest dan membuka pesan rahasiamu!
+        <p className="font-sans text-xs sm:text-sm text-gray-300 mb-6 leading-relaxed">
+          Petualangan digital untuk{" "}
+          <span className="font-pixel text-[#39d86f]">{receiverName}</span> telah
+          siap dimainkan.
         </p>
 
-        {/* Link Box */}
-        <div className="rpg-inset p-3.5 mb-6 text-left flex flex-col gap-2">
-          <span className="font-pixel text-[9px] text-amber-300/80">TAUTAN PETUALANGAN:</span>
-          <div className="bg-black/60 p-2.5 border border-slate-700 font-mono text-xs text-emerald-400 break-all select-all">
+        <div className="rpg-inset p-3 mb-6 flex items-center justify-between gap-2 border border-[#383461]">
+          <span className="font-pixel text-[10px] text-gray-400 truncate text-left select-all">
             {playUrl}
-          </div>
+          </span>
+          <span className="text-[10px] text-amber-300 font-pixel shrink-0">
+            [TERSIMPAN]
+          </span>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <RetroButton
             type="button"
             variant="primary"
@@ -635,7 +652,7 @@ export default function CreateForm() {
           <button
             type="button"
             onClick={handleReset}
-            className="font-pixel text-[10px] text-slate-400 hover:text-amber-300 transition-colors uppercase tracking-wider"
+            className="font-pixel text-[10px] text-slate-400 hover:text-amber-300 transition-colors uppercase tracking-wider cursor-pointer"
           >
             + Buat Kado Lainnya
           </button>
@@ -644,748 +661,812 @@ export default function CreateForm() {
     );
   }
 
-  // Tampilan FORM PEMBUATAN
+  // =========================================================================
+  // TAMPILAN FORMULIR WIZARD 3 LANGKAH + LIVE PREVIEW DESKTOP
+  // =========================================================================
   return (
-    <>
-      {/* Toast Notification Inline / Fixed */}
+    <div className="w-full max-w-6xl mx-auto z-10 animate-fade-in">
+      {/* Toast Notifikasi Ringan */}
       {toast && (
-        <aside
-          role="alert"
-          aria-live="assertive"
-          className="fixed top-4 inset-x-4 sm:inset-x-auto sm:right-4 z-50 p-4 bg-rose-950/95 border-2 border-rose-500 text-rose-200 text-xs sm:text-sm font-sans rounded-lg shadow-[0_10px_30px_rgba(0,0,0,0.85)] flex items-center gap-3 animate-fade-in max-w-md"
-        >
-          <PixelAlert size={18} className="shrink-0 text-rose-300" />
-          <span className="flex-1 font-medium leading-snug">{toast}</span>
-          <button
-            type="button"
-            onClick={() => setToast(null)}
-            className="text-rose-400 hover:text-white font-pixel text-xs p-1 cursor-pointer"
-            aria-label="Tutup notifikasi"
-          >
-            ✕
-          </button>
-        </aside>
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#1e1a38]/95 border-2 border-amber-400/80 px-4 py-2 text-xs font-sans text-amber-200 shadow-2xl backdrop-blur-md rounded-xs flex items-center gap-2 animate-fade-in">
+          <PixelSparkle size={13} className="text-amber-300 shrink-0" />
+          <span>{toast}</span>
+        </div>
       )}
 
-      <form
-        noValidate
-        onSubmit={handleSubmit}
-        className="w-full max-w-2xl mx-auto rpg-box p-5 sm:p-8 md:p-10 relative z-10 animate-fade-in"
-      >
-        {/* Header Form */}
-        <div className="text-center mb-8 border-b-2 border-[#383461] pb-6">
-          <div className="rpg-badge bg-[#241f3d] text-[#ffbe3b] border-[#ffbe3b]/40 mb-2 flex items-center justify-center gap-1.5">
-            <PixelSword size={12} className="text-[#ffbe3b]" />
-            <span>LANGKAH PERSIAPAN QUEST</span>
-            <PixelSword size={12} className="text-[#ffbe3b]" />
-          </div>
-          <h2 className="font-pixel text-sm sm:text-lg md:text-xl text-[#ffbe3b] mb-2 tracking-wide drop-shadow-[2px_2px_0_#000]">
-            FORMULIR KADO 16-BIT
-          </h2>
-          <p className="font-sans text-xs sm:text-sm text-slate-300 max-w-lg mx-auto leading-relaxed">
-            Isi detail penerima dan kejutan rahasia. Selesai dibuat dalam waktu kurang dari 2 menit!
-          </p>
-        </div>
-
-        {errorMessage && (
-          <div className="mb-6 p-4 bg-rose-950/90 border-2 border-rose-500 text-xs text-rose-200 font-sans shadow-[4px_4px_0_#000] flex items-start gap-2.5">
-            <PixelAlert size={16} className="shrink-0 text-rose-400 mt-0.5" />
-            <span>{errorMessage}</span>
-          </div>
-        )}
-
-        {/* ================= SEKSI 1: IDENTITAS PENERIMA ================= */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[#282548]">
-            <span className="font-pixel text-xs text-[#ffbe3b] bg-[#ffbe3b]/10 px-2 py-0.5 border border-[#ffbe3b]/30">
-              01
-            </span>
-            <h3 className="font-pixel text-xs text-slate-100 tracking-wide">
-              IDENTITAS & PESAN
-            </h3>
-          </div>
-
-          {/* 1. Nama Penerima */}
-          <div className="mb-5">
-            <label
-              htmlFor="receiverName"
-              className="block font-sans text-xs font-semibold text-slate-200 mb-1.5"
-            >
-              Nama Penerima Kado <span className="text-rose-400">*</span>
-            </label>
-            <input
-              id="receiverName"
-              type="text"
-              maxLength={50}
-              value={receiverName}
-              onChange={(e) => {
-                setReceiverName(e.target.value);
-                if (fieldErrors.receiverName) {
-                  setFieldErrors((prev) => ({ ...prev, receiverName: undefined }));
-                }
-              }}
-              placeholder="Contoh: Ayunda, Budi, atau Sahabat Terbaik"
-              aria-invalid={!!fieldErrors.receiverName}
-              aria-describedby={fieldErrors.receiverName ? "name-error" : undefined}
-              className={`rpg-input w-full p-3 text-xs sm:text-sm rounded-none ${fieldErrors.receiverName
-                ? "border-red-500 ring-2 ring-red-400 bg-red-950/20"
-                : ""
-                }`}
-            />
-            {fieldErrors.receiverName && (
-              <p id="name-error" role="alert" className="text-xs text-rose-400 font-sans mt-1.5 flex items-center gap-1.5 font-medium">
-                <PixelAlert size={13} className="shrink-0 text-rose-400" />
-                <span>{fieldErrors.receiverName}</span>
-              </p>
-            )}
-            <div className="flex justify-between items-center mt-1 text-[11px] text-slate-400 font-sans">
-              <span>Nama ini akan dipanggil oleh NPC di dalam game!</span>
-              <span>{receiverName.length}/50</span>
-            </div>
-          </div>
-
-          {/* 2. Pesan Kado */}
-          <div>
-            <div className="flex justify-between items-center mb-1.5">
-              <label
-                htmlFor="messageText"
-                className="font-sans text-xs font-semibold text-slate-200"
-              >
-                Surat / Pesan Rahasia <span className="text-rose-400">*</span>
-              </label>
-              <span className="font-sans text-[11px] text-slate-400">
-                {messageText.length}/500
-              </span>
-            </div>
-            <textarea
-              id="messageText"
-              maxLength={500}
-              rows={4}
-              value={messageText}
-              onChange={(e) => {
-                setMessageText(e.target.value);
-                if (fieldErrors.messageText) {
-                  setFieldErrors((prev) => ({ ...prev, messageText: undefined }));
-                }
-              }}
-              placeholder="Tuliskan ucapan selamat ulang tahun, ungkapan terima kasih, atau pesan menyentuh hati yang akan muncul saat kado dibuka..."
-              aria-invalid={!!fieldErrors.messageText}
-              aria-describedby={fieldErrors.messageText ? "msg-error" : undefined}
-              className={`rpg-input w-full p-3 text-xs sm:text-sm leading-relaxed resize-none rounded-none ${fieldErrors.messageText
-                ? "border-red-500 ring-2 ring-red-400 bg-red-950/20"
-                : ""
-                }`}
-            />
-            {fieldErrors.messageText && (
-              <p id="msg-error" role="alert" className="text-xs text-rose-400 font-sans mt-1.5 flex items-center gap-1.5 font-medium">
-                <PixelAlert size={13} className="shrink-0 text-rose-400" />
-                <span>{fieldErrors.messageText}</span>
-              </p>
-            )}
-            <p className="text-[11px] text-slate-400 font-sans mt-1">
-              Pesan ini akan dimainkan dengan animasi mesin tik dan dicetak pada Kartu Kado (.PNG).
-            </p>
-          </div>
-        </div>
-
-        {/* ================= SEKSI 2: AVATAR KARAKTER ================= */}
-        <div id="avatar-section" className="mb-8">
-          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[#282548]">
-            <span className="font-pixel text-xs text-[#2ed573] bg-[#2ed573]/10 px-2 py-0.5 border border-[#2ed573]/30">
-              02
-            </span>
-            <h3 className="font-pixel text-xs text-slate-100 tracking-wide">
-              PILIH KARAKTER PAHLAWAN
-            </h3>
-          </div>
-
-          <p className="font-sans text-xs text-slate-300 mb-3">
-            Pilih avatar yang akan dikendalikan penerima kado saat menjelajahi kota senja:
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5" role="radiogroup" aria-label="Pilih Karakter Pemain">
-            {/* Avatar Cowok */}
-            <button
-              type="button"
-              role="radio"
-              aria-checked={avatar === "male"}
-              onClick={() => setAvatar("male")}
-              className={`p-3.5 text-left flex items-center gap-3.5 transition-all cursor-pointer ${avatar === "male"
-                ? "rpg-box-golden"
-                : "rpg-inset opacity-80 hover:opacity-100"
-                }`}
-            >
-              <div className="w-[72px] h-[72px] flex-shrink-0 bg-black/60 border border-slate-700 flex items-center justify-center p-1 shadow-inner">
-                <canvas
-                  ref={maleCanvasRef}
-                  width={32}
-                  height={32}
-                  className="w-16 h-16 block pixel-canvas"
-                  aria-hidden="true"
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className="font-pixel text-xs text-slate-100 truncate">Cowok</span>
-                  {avatar === "male" && (
-                    <span className="font-pixel text-[8px] bg-amber-400 text-black px-1.5 py-0.5 font-bold">
-                      DIPILIH
-                    </span>
-                  )}
-                </div>
-                <p className="font-sans text-xs text-slate-400">
-                  Pendekar Biru 16-Bit
-                </p>
-              </div>
-            </button>
-
-            {/* Avatar Cewek */}
-            <button
-              type="button"
-              role="radio"
-              aria-checked={avatar === "female"}
-              onClick={() => setAvatar("female")}
-              className={`p-3.5 text-left flex items-center gap-3.5 transition-all cursor-pointer ${avatar === "female"
-                ? "rpg-box-golden"
-                : "rpg-inset opacity-80 hover:opacity-100"
-                }`}
-            >
-              <div className="w-[72px] h-[72px] flex-shrink-0 bg-black/60 border border-slate-700 flex items-center justify-center p-1 shadow-inner">
-                <canvas
-                  ref={femaleCanvasRef}
-                  width={32}
-                  height={32}
-                  className="w-16 h-16 block pixel-canvas"
-                  aria-hidden="true"
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className="font-pixel text-xs text-slate-100 truncate">Cewek</span>
-                  {avatar === "female" && (
-                    <span className="font-pixel text-[8px] bg-amber-400 text-black px-1.5 py-0.5 font-bold">
-                      DIPILIH
-                    </span>
-                  )}
-                </div>
-                <p className="font-sans text-xs text-slate-400">
-                  Pita & Gaun Rose 16-Bit
-                </p>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        {/* ================= SEKSI 3: FOTO KENANGAN (DROPZONE) ================= */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[#282548]">
-            <span className="font-pixel text-xs text-[#ff6b81] bg-[#ff6b81]/10 px-2 py-0.5 border border-[#ff6b81]/30">
-              03
-            </span>
-            <h3 className="font-pixel text-xs text-slate-100 tracking-wide">
-              FOTO KENANGAN SPESIAL
-            </h3>
-          </div>
-
-          <label
-            htmlFor="imageUpload"
-            className="block font-sans text-xs font-semibold text-slate-200 mb-1.5"
+      {/* Stepper Wizard Indicator (3 Langkah Retro) */}
+      <div className="w-full max-w-2xl mx-auto mb-8">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 relative">
+          {/* Step 1 */}
+          <button
+            type="button"
+            onClick={() => setCurrentStep(1)}
+            className={`flex flex-col items-center p-2.5 sm:p-3 border-2 transition-all cursor-pointer rounded-xs ${
+              currentStep === 1
+                ? "bg-[#241e3d] border-[#ffd166] shadow-[2px_2px_0px_#000]"
+                : "bg-[#141226]/80 border-[#322d56] opacity-75 hover:opacity-100"
+            }`}
           >
-            Foto Kenangan / Hadiah <span className="text-rose-400">*</span>
-          </label>
+            <span className="font-pixel text-[9px] sm:text-[10px] text-[#ffd166] mb-1">
+              TAHAP 01
+            </span>
+            <span className="font-sans text-xs sm:text-sm font-semibold text-white tracking-tight text-center">
+              Penerima & Karakter
+            </span>
+          </button>
 
-          {/* Hidden Input File - TANPA required agar tidak diblokir browser secara silent */}
-          <input
-            ref={fileInputRef}
-            id="imageUpload"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={handleImageChange}
-            aria-invalid={!!fieldErrors.image}
-            aria-describedby={fieldErrors.image ? "image-error" : undefined}
-            className="hidden"
-          />
+          {/* Step 2 */}
+          <button
+            type="button"
+            onClick={() => {
+              if (validateStep1()) setCurrentStep(2);
+            }}
+            className={`flex flex-col items-center p-2.5 sm:p-3 border-2 transition-all cursor-pointer rounded-xs ${
+              currentStep === 2
+                ? "bg-[#241e3d] border-[#ffd166] shadow-[2px_2px_0px_#000]"
+                : "bg-[#141226]/80 border-[#322d56] opacity-75 hover:opacity-100"
+            }`}
+          >
+            <span className="font-pixel text-[9px] sm:text-[10px] text-[#ffd166] mb-1">
+              TAHAP 02
+            </span>
+            <span className="font-sans text-xs sm:text-sm font-semibold text-white tracking-tight text-center">
+              Foto & Musik
+            </span>
+          </button>
 
-          {/* Custom Retro Dropzone (D4: tabIndex={0}) */}
-          {!imagePreview ? (
-            <div
-              id="photo-dropzone"
-              tabIndex={0}
-              role="button"
-              aria-label="Unggah Foto Kenangan"
-              aria-describedby={fieldErrors.image ? "image-error" : undefined}
-              onClick={() => fileInputRef.current?.click()}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  fileInputRef.current?.click();
-                }
-              }}
-              className={`p-6 text-center cursor-pointer transition-all group outline-none ${fieldErrors.image
-                ? "border-2 border-red-500 ring-2 ring-red-400 bg-red-950/20"
-                : "rpg-inset border-2 border-dashed border-[#383461] hover:border-[#ffbe3b] hover:bg-[#151429]"
-                }`}
-            >
-              <div className="w-12 h-12 mx-auto mb-3 bg-[#1e1c38] rounded-full flex items-center justify-center border border-slate-700 group-hover:scale-110 transition-transform">
-                <PixelStar size={22} className="text-[#ffd166]" />
-              </div>
-              <p className="font-pixel text-xs text-[#ffbe3b] mb-1">
-                KLIK UNTUK UNGGAH FOTO
-              </p>
-              <p className="font-sans text-xs text-slate-400">
-                Format JPG, PNG, atau WebP (Maksimal 10 MB)
-              </p>
-            </div>
-          ) : (
-            <div className="rpg-inset p-4 flex flex-col sm:flex-row items-center gap-4">
-              <div className="flex-shrink-0">
-                <PixelPhotoFrame
-                  imageUrl={imagePreview}
-                  alt="Preview Kado"
-                  maxHeight="max-h-36"
-                  aspectRatio="square"
-                  className="max-w-[130px]"
-                />
-              </div>
-              <div className="flex-1 text-center sm:text-left">
-                <span className="font-pixel text-[10px] text-emerald-400 flex items-center justify-center sm:justify-start gap-1.5 mb-1">
-                  <PixelCheck size={11} className="shrink-0" />
-                  <span>FOTO BERHASIL DIPILIH</span>
-                </span>
-                <p className="font-sans text-xs text-slate-300 mb-3">
-                  {imageFile?.name || "Foto kenangan siap disematkan ke kado"}
-                </p>
-                <div className="flex gap-2 justify-center sm:justify-start">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="font-pixel text-[9px] bg-[#242145] text-amber-300 px-3 py-1.5 border border-slate-700 hover:border-amber-400 cursor-pointer flex items-center gap-1"
-                  >
-                    <PixelSparkle size={10} className="shrink-0" />
-                    <span>Ganti Foto</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleRemoveImage}
-                    className="font-pixel text-[9px] bg-[#242145] text-rose-400 px-3 py-1.5 border border-slate-700 hover:border-rose-400 cursor-pointer"
-                  >
-                    ✖ Hapus
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {fieldErrors.image && (
-            <p
-              id="image-error"
-              role="alert"
-              className="text-xs text-rose-400 font-sans mt-2 flex items-center gap-1.5 font-medium"
-            >
-              <PixelAlert size={13} className="shrink-0 text-rose-400" />
-              <span>{fieldErrors.image}</span>
-            </p>
-          )}
+          {/* Step 3 */}
+          <button
+            type="button"
+            onClick={() => {
+              if (validateStep1() && validateStep2()) setCurrentStep(3);
+            }}
+            className={`flex flex-col items-center p-2.5 sm:p-3 border-2 transition-all cursor-pointer rounded-xs ${
+              currentStep === 3
+                ? "bg-[#241e3d] border-[#ffd166] shadow-[2px_2px_0px_#000]"
+                : "bg-[#141226]/80 border-[#322d56] opacity-75 hover:opacity-100"
+            }`}
+          >
+            <span className="font-pixel text-[9px] sm:text-[10px] text-[#ffd166] mb-1">
+              TAHAP 03
+            </span>
+            <span className="font-sans text-xs sm:text-sm font-semibold text-white tracking-tight text-center">
+              Kuis & Bungkus
+            </span>
+          </button>
         </div>
+      </div>
 
-        {/* ================= SEKSI 4: TANTANGAN KUIS RPG ================= */}
-        <div id="quiz-section" className="mb-8">
-          <div className="flex items-center justify-between mb-4 pb-2 border-b border-[#282548]">
-            <div className="flex items-center gap-2">
-              <span className="font-pixel text-xs text-[#a55eea] bg-[#a55eea]/10 px-2 py-0.5 border border-[#a55eea]/30">
-                04
+      {/* Toggle Pratinjau Mobile (Khusus Layar Sempit < lg) */}
+      <div className="lg:hidden mb-6 flex justify-center">
+        <button
+          type="button"
+          onClick={() => setShowMobilePreview(!showMobilePreview)}
+          className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#17152b] border border-[#ffd166]/50 rounded-xs text-[10px] font-pixel text-amber-300 shadow-sm cursor-pointer"
+        >
+          <PixelSparkle size={11} className="text-[#ffd166]" />
+          <span>{showMobilePreview ? "Sembunyikan Pratinjau Kado ▲" : "Lihat Pratinjau Kado Live ▼"}</span>
+        </button>
+      </div>
+
+      {/* Layout Grid 2-Kolom (Desktop lg: 7 Col Form / 5 Col Live Preview) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* ========================================================================= */}
+        {/* KOLOM KIRI: FORMULIR WIZARD AKTIF (lg:col-span-7)                        */}
+        {/* ========================================================================= */}
+        <div className="lg:col-span-7 w-full">
+          <form onSubmit={handleSubmit} noValidate className="rpg-box p-5 sm:p-7 md:p-8">
+            {/* Header Form Langkah */}
+            <div className="mb-6 pb-4 border-b border-[#383461] flex items-center justify-between">
+              <div>
+                <span className="font-pixel text-[9px] text-[#ffd166] tracking-widest block mb-1">
+                  QUEST BUILDER • LANGKAH {currentStep} DARI 3
+                </span>
+                <h2 className="font-pixel text-base sm:text-lg text-white">
+                  {currentStep === 1 && "IDENTITAS & KARAKTER"}
+                  {currentStep === 2 && "FOTO KENANGAN & MUSIK"}
+                  {currentStep === 3 && "TANTANGAN KUIS & BUNGKUS"}
+                </h2>
+              </div>
+              <span className="text-xs font-sans text-slate-400">
+                {currentStep === 1 && "Langkah 1/3"}
+                {currentStep === 2 && "Langkah 2/3"}
+                {currentStep === 3 && "Langkah 3/3"}
               </span>
-              <h3 className="font-pixel text-xs text-slate-100 tracking-wide">
-                TANTANGAN KUIS (OPSIONAL)
-              </h3>
             </div>
-            <span className="font-pixel text-[10px] text-amber-300">{challenges.length}/3 SOAL</span>
-          </div>
 
-          <p className="font-sans text-xs text-slate-300 mb-4 leading-relaxed">
-            Sematkan pertanyaan rahasia yang ditemui di jalan. Penerima kado yang menjawab benar akan mendapat perisai atau buff kecepatan!
-          </p>
+            {/* Pesan Kesalahan Lembut / Estetis (Tanpa Banner Merah Agresif) */}
+            {errorMessage && (
+              <div className="p-3 bg-amber-950/30 border border-amber-400/50 rounded-xs text-amber-200 text-xs flex items-center gap-2 mb-6 font-sans animate-fade-in">
+                <PixelAlert size={14} className="text-amber-400 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
 
-          {challenges.length > 0 && (
-            <div className="space-y-4 mb-4">
-              {challenges.map((c, cIdx) => (
-                <div
-                  key={c.id}
-                  className="rpg-inset p-4 sm:p-5 space-y-3.5 border-l-4 border-l-[#ffbe3b]"
-                >
-                  <div className="flex items-center justify-between border-b border-slate-700/60 pb-2">
-                    <span className="font-pixel text-xs text-[#ffbe3b]">
-                      SOAL #{cIdx + 1}
-                    </span>
+            {/* ------------------------------------------------------------- */}
+            {/* LANGKAH 1: IDENTITAS & KARAKTER                               */}
+            {/* ------------------------------------------------------------- */}
+            {currentStep === 1 && (
+              <div className="space-y-6 animate-fade-in">
+                {/* Nama Penerima */}
+                <div>
+                  <label htmlFor="receiverName" className="block text-xs font-pixel text-slate-200 mb-2">
+                    NAMA PENERIMA KADO <span className="text-amber-400">*</span>
+                  </label>
+                  <input
+                    id="receiverName"
+                    type="text"
+                    value={receiverName}
+                    maxLength={50}
+                    onChange={(e) => {
+                      setReceiverName(e.target.value);
+                      if (fieldErrors.receiverName) {
+                        setFieldErrors((prev) => ({ ...prev, receiverName: undefined }));
+                      }
+                    }}
+                    placeholder="Contoh: Ayunda, Budi, atau Sahabat Tercinta"
+                    className={`rpg-input w-full p-3 text-sm rounded-none transition-colors ${
+                      fieldErrors.receiverName
+                        ? "border-2 border-amber-400/80 bg-amber-950/20 shadow-[0_0_8px_rgba(251,191,36,0.15)]"
+                        : ""
+                    }`}
+                  />
+                  <div className="flex justify-between items-center mt-1.5 text-xs text-slate-400">
+                    {fieldErrors.receiverName ? (
+                      <p className="text-amber-300 flex items-center gap-1.5 font-sans">
+                        <PixelSparkle size={11} className="text-amber-400 shrink-0" />
+                        <span>{fieldErrors.receiverName}</span>
+                      </p>
+                    ) : (
+                      <span>Nama ini akan dipanggil oleh NPC di dalam game!</span>
+                    )}
+                    <span>{receiverName.length}/50</span>
+                  </div>
+                </div>
+
+                {/* Surat / Pesan Rahasia */}
+                <div>
+                  <label htmlFor="messageText" className="block text-xs font-pixel text-slate-200 mb-2">
+                    SURAT / PESAN RAHASIA <span className="text-amber-400">*</span>
+                  </label>
+                  <textarea
+                    id="messageText"
+                    value={messageText}
+                    maxLength={500}
+                    rows={5}
+                    onChange={(e) => {
+                      setMessageText(e.target.value);
+                      if (fieldErrors.messageText) {
+                        setFieldErrors((prev) => ({ ...prev, messageText: undefined }));
+                      }
+                    }}
+                    placeholder="Tuliskan ucapan selamat ulang tahun, ungkapan terima kasih, atau pesan menyentuh hati yang akan terbuka di garis akhir..."
+                    className={`rpg-input w-full p-3 text-sm rounded-none leading-relaxed transition-colors ${
+                      fieldErrors.messageText
+                        ? "border-2 border-amber-400/80 bg-amber-950/20 shadow-[0_0_8px_rgba(251,191,36,0.15)]"
+                        : ""
+                    }`}
+                  />
+                  <div className="flex justify-between items-center mt-1.5 text-xs text-slate-400">
+                    {fieldErrors.messageText ? (
+                      <p className="text-amber-300 flex items-center gap-1.5 font-sans">
+                        <PixelSparkle size={11} className="text-amber-400 shrink-0" />
+                        <span>{fieldErrors.messageText}</span>
+                      </p>
+                    ) : (
+                      <span>Pesan akan dimainkan dengan animasi mesin tik UTF-8 di akhir quest.</span>
+                    )}
+                    <span>{messageText.length}/500</span>
+                  </div>
+                </div>
+
+                {/* Pilih Karakter Pahlawan */}
+                <div id="avatar-section" tabIndex={-1} className="outline-none">
+                  <label className="block text-xs font-pixel text-slate-200 mb-2">
+                    PILIH KARAKTER PAHLAWAN <span className="text-amber-400">*</span>
+                  </label>
+                  <p className="text-xs text-slate-300 font-sans mb-3">
+                    Pilih avatar yang akan dikendalikan penerima kado saat menjelajahi kota senja:
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                    {/* Avatar Cowok */}
                     <button
                       type="button"
-                      onClick={() => handleRemoveChallenge(c.id)}
-                      className="font-pixel text-[9px] text-rose-400 hover:text-rose-300 uppercase tracking-wider"
+                      onClick={() => setAvatar("male")}
+                      className={`p-3.5 flex items-center gap-3 border-2 transition-all text-left cursor-pointer rounded-xs ${
+                        avatar === "male"
+                          ? "bg-[#221c3b] border-[#ffd166] shadow-[0_0_12px_rgba(255,209,102,0.2),2px_2px_0px_#000]"
+                          : "bg-[#141226] border-[#383461] hover:border-slate-500 opacity-75 hover:opacity-100"
+                      }`}
                     >
-                      [✖ Hapus]
+                      <div className="w-12 h-12 bg-[#121324] border border-black flex items-center justify-center shrink-0">
+                        <canvas ref={maleCanvasRef} width={64} height={64} className="w-10 h-10 image-pixelated" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-pixel text-xs text-white">Cowok</span>
+                          {avatar === "male" && (
+                            <span className="text-[9px] font-pixel text-[#2ed573] bg-[#2ed573]/20 px-1 py-0.5 border border-[#2ed573]/40">
+                              DIPILIH
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-slate-400 font-sans block mt-0.5">
+                          Pendekar Biru
+                        </span>
+                      </div>
+                    </button>
+
+                    {/* Avatar Cewek */}
+                    <button
+                      type="button"
+                      onClick={() => setAvatar("female")}
+                      className={`p-3.5 flex items-center gap-3 border-2 transition-all text-left cursor-pointer rounded-xs ${
+                        avatar === "female"
+                          ? "bg-[#221c3b] border-[#ffd166] shadow-[0_0_12px_rgba(255,209,102,0.2),2px_2px_0px_#000]"
+                          : "bg-[#141226] border-[#383461] hover:border-slate-500 opacity-75 hover:opacity-100"
+                      }`}
+                    >
+                      <div className="w-12 h-12 bg-[#121324] border border-black flex items-center justify-center shrink-0">
+                        <canvas ref={femaleCanvasRef} width={64} height={64} className="w-10 h-10 image-pixelated" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-pixel text-xs text-white">Cewek</span>
+                          {avatar === "female" && (
+                            <span className="text-[9px] font-pixel text-[#ffd166] bg-[#ffd166]/20 px-1 py-0.5 border border-[#ffd166]/40">
+                              DIPILIH
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-slate-400 font-sans block mt-0.5">
+                          Pita & Gaun Rose
+                        </span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Tombol Lanjut ke Langkah 2 */}
+                <div className="pt-4 border-t border-[#383461] flex justify-end">
+                  <RetroButton
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    onClick={handleNextToStep2}
+                    className="py-3 px-6 text-xs font-pixel flex items-center gap-2"
+                  >
+                    <span>Lanjut ke Foto & Musik</span>
+                    <PixelArrow direction="right" size={12} className="shrink-0" />
+                  </RetroButton>
+                </div>
+              </div>
+            )}
+
+            {/* ------------------------------------------------------------- */}
+            {/* LANGKAH 2: FOTO KENANGAN & MUSIK                              */}
+            {/* ------------------------------------------------------------- */}
+            {currentStep === 2 && (
+              <div className="space-y-6 animate-fade-in">
+                {/* Unggah Foto Kenangan */}
+                <div id="photo-dropzone" tabIndex={-1} className="outline-none">
+                  <label className="block text-xs font-pixel text-slate-200 mb-2">
+                    FOTO KENANGAN SPESIAL <span className="text-amber-400">*</span>
+                  </label>
+                  <p className="text-xs text-slate-300 font-sans mb-3">
+                    Foto ini akan dibingkai rapi dalam gaya polaroid koleksi di akhir petualangan:
+                  </p>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+
+                  {imagePreview ? (
+                    <div className="rpg-inset p-4 flex flex-col sm:flex-row items-center gap-4 border border-[#ffd166]/40">
+                      <div className="w-28 sm:w-32 shrink-0">
+                        <PixelPhotoFrame
+                          imageUrl={imagePreview}
+                          alt="Foto Kado Kenangan"
+                          aspectRatio="square"
+                        />
+                      </div>
+                      <div className="flex-1 text-center sm:text-left">
+                        <span className="font-pixel text-[10px] text-[#2ed573] flex items-center justify-center sm:justify-start gap-1.5 mb-1">
+                          <PixelCheck size={12} />
+                          <span>Foto Siap Disematkan</span>
+                        </span>
+                        <p className="font-sans text-xs text-slate-300 mb-3">
+                          {imageFile ? `${imageFile.name} (${Math.round(imageFile.size / 1024)} KB)` : "Foto tersimpan"}
+                        </p>
+                        <div className="flex items-center justify-center sm:justify-start gap-2">
+                          <RetroButton
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="text-[10px] py-1.5 px-3"
+                          >
+                            Ganti Foto
+                          </RetroButton>
+                          <RetroButton
+                            type="button"
+                            variant="danger"
+                            size="sm"
+                            onClick={handleRemoveImage}
+                            className="text-[10px] py-1.5 px-3"
+                          >
+                            Hapus
+                          </RetroButton>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => fileInputRef.current?.click()}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          fileInputRef.current?.click();
+                        }
+                      }}
+                      className={`border-2 border-dashed p-8 text-center cursor-pointer transition-colors rounded-xs select-none ${
+                        fieldErrors.image
+                          ? "border-amber-400 bg-amber-950/25"
+                          : "border-[#4a4575] bg-[#141226] hover:border-[#ffd166] hover:bg-[#1b1834]"
+                      }`}
+                    >
+                      <div className="w-12 h-12 mx-auto mb-3 rounded-xs bg-[#1f1b3a] border border-[#ffd166]/40 flex items-center justify-center">
+                        <PixelGift size={24} className="text-[#ffd166]" />
+                      </div>
+                      <span className="font-pixel text-xs text-[#ffd166] block mb-1">
+                        KLIK UNTUK UNGGAH FOTO
+                      </span>
+                      <p className="font-sans text-xs text-slate-400">
+                        Format JPG, PNG, atau WebP (Maksimal 10 MB, kompresi otomatis)
+                      </p>
+                    </div>
+                  )}
+
+                  {fieldErrors.image && (
+                    <p className="mt-1.5 text-xs text-amber-300 flex items-center gap-1.5 font-sans">
+                      <PixelSparkle size={11} className="text-amber-400 shrink-0" />
+                      <span>{fieldErrors.image}</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Musik Latar 8-Bit */}
+                <div id="music-section">
+                  <label className="block text-xs font-pixel text-slate-200 mb-2">
+                    MUSIK LATAR 8-BIT <span className="text-amber-400">*</span>
+                  </label>
+
+                  {/* Tabs Preset vs Custom */}
+                  <div className="flex border-b border-[#383461] mb-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMusicType("preset");
+                        if (testAudioRef.current) testAudioRef.current.pause();
+                        setIsPlayingTestAudio(false);
+                      }}
+                      className={`py-2 px-4 font-pixel text-[10px] border-b-2 transition-all cursor-pointer ${
+                        musicType === "preset"
+                          ? "border-[#ffd166] text-[#ffd166] bg-[#1e1a38]"
+                          : "border-transparent text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      Melodi Pilihan
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMusicType("custom");
+                        stopBgm();
+                        setPreviewingPreset(null);
+                      }}
+                      className={`py-2 px-4 font-pixel text-[10px] border-b-2 transition-all cursor-pointer ${
+                        musicType === "custom"
+                          ? "border-[#ffd166] text-[#ffd166] bg-[#1e1a38]"
+                          : "border-transparent text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      Tautan .mp3 Sendiri
                     </button>
                   </div>
 
-                  {/* Pertanyaan */}
-                  <div>
-                    <label className="block font-sans text-xs text-slate-200 mb-1">
-                      Pertanyaan <span className="text-rose-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      maxLength={140}
-                      required
-                      value={c.question}
-                      onChange={(e) => handleChallengeChange(c.id, "question", e.target.value)}
-                      placeholder="Contoh: Di mana tempat pertama kali kita jalan bareng?"
-                      className="rpg-input w-full p-2.5 text-xs rounded-none"
-                    />
-                  </div>
-
-                  {/* Foto Kuis Opsional */}
-                  <div>
-                    <label className="block font-sans text-xs text-slate-300 mb-1">
-                      Foto Bantuan Soal (Opsional)
-                    </label>
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      disabled={!!uploadingChallengePhotoIds[c.id]}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        e.target.value = "";
-                        if (file) handleUploadChallengePhoto(c.id, file);
-                      }}
-                      className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-2.5 file:border file:border-black file:text-[10px] file:font-pixel file:bg-[#2c3e50] file:text-white cursor-pointer"
-                    />
-                    {uploadingChallengePhotoIds[c.id] && (
-                      <p className="font-pixel text-[9px] text-amber-300 mt-1 animate-pulse">
-                        ⏳ Mengunggah foto soal...
-                      </p>
-                    )}
-                    {c.imageUrl && (
-                      <div className="mt-2 flex items-center gap-2 bg-black/40 p-2 border border-slate-700">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={c.imageUrl}
-                          alt="Foto soal"
-                          className="w-10 h-10 object-cover border border-white"
-                        />
-                        <span className="font-sans text-xs text-emerald-400 flex items-center gap-1">
-                          <PixelCheck size={11} className="shrink-0" />
-                          <span>Foto terunggah</span>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleChallengeChange(c.id, "imageUrl", undefined)}
-                          className="font-pixel text-[9px] text-rose-400 hover:underline ml-auto"
+                  {musicType === "preset" ? (
+                    <div className="space-y-2.5">
+                      {PRESET_BGM_OPTIONS.map((opt) => (
+                        <div
+                          key={opt.id}
+                          className={`p-3 border-2 flex items-center justify-between transition-colors rounded-xs ${
+                            selectedPreset === opt.id
+                              ? "bg-[#221c3b] border-[#ffd166]"
+                              : "bg-[#141226] border-[#383461] hover:border-slate-500"
+                          }`}
                         >
-                          Hapus
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 4 Pilihan Jawaban */}
-                  <div>
-                    <label className="block font-sans text-xs text-slate-200 mb-2">
-                      Pilihan Jawaban (Pilih radio untuk jawaban <span className="text-emerald-400 font-semibold">BENAR</span>)
-                    </label>
-                    <div className="space-y-2">
-                      {c.options.map((opt, optIdx) => (
-                        <div key={optIdx} className="flex items-center gap-2.5">
-                          <label className="flex items-center cursor-pointer gap-1.5 bg-black/40 px-2 py-1.5 border border-slate-700">
+                          <label className="flex items-center gap-2.5 cursor-pointer flex-1">
                             <input
                               type="radio"
-                              name={`correct_${c.id}`}
-                              checked={c.correctIndex === optIdx}
-                              onChange={() => handleChallengeChange(c.id, "correctIndex", optIdx)}
-                              className="accent-emerald-400"
+                              name="preset_music"
+                              checked={selectedPreset === opt.id}
+                              onChange={() => setSelectedPreset(opt.id)}
+                              className="accent-[#ffd166] cursor-pointer"
                             />
-                            <span className="font-pixel text-xs text-amber-300">
-                              {String.fromCharCode(65 + optIdx)}
+                            <span className="font-sans text-xs sm:text-sm text-slate-200 font-medium">
+                              {opt.label}
                             </span>
                           </label>
+
+                          <RetroButton
+                            type="button"
+                            variant={previewingPreset === opt.id ? "danger" : "secondary"}
+                            size="sm"
+                            onClick={() => handleTogglePresetPreview(opt.id)}
+                            className="text-[10px] py-1 px-2.5 shrink-0"
+                          >
+                            {previewingPreset === opt.id ? "⏹ STOP" : "▶ TES"}
+                          </RetroButton>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex gap-2">
+                        <input
+                          id="musicUrl"
+                          type="url"
+                          value={musicUrl}
+                          onChange={(e) => setMusicUrl(e.target.value)}
+                          placeholder="https://domain.com/lagu-kenangan.mp3"
+                          className="rpg-input flex-1 p-2.5 text-xs rounded-none"
+                        />
+                        <RetroButton
+                          type="button"
+                          variant={isPlayingTestAudio ? "danger" : "secondary"}
+                          size="sm"
+                          onClick={handleToggleTestMusic}
+                          disabled={!musicUrl.trim()}
+                          className="text-[10px] px-3 shrink-0"
+                        >
+                          {isPlayingTestAudio ? "⏹ STOP" : "▶ TES"}
+                        </RetroButton>
+                      </div>
+                      {fieldErrors.music && (
+                        <p className="mt-1.5 text-xs text-amber-300 flex items-center gap-1.5 font-sans">
+                          <PixelSparkle size={11} className="text-amber-400 shrink-0" />
+                          <span>{fieldErrors.music}</span>
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Navigasi Langkah 2 */}
+                <div className="pt-4 border-t border-[#383461] flex items-center justify-between">
+                  <RetroButton
+                    type="button"
+                    variant="secondary"
+                    size="md"
+                    onClick={() => setCurrentStep(1)}
+                    className="py-3 px-5 text-xs font-pixel flex items-center gap-2"
+                  >
+                    <PixelArrow direction="left" size={12} className="shrink-0" />
+                    <span>Kembali</span>
+                  </RetroButton>
+
+                  <RetroButton
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    onClick={handleNextToStep3}
+                    className="py-3 px-6 text-xs font-pixel flex items-center gap-2"
+                  >
+                    <span>Lanjut ke Kuis & Bungkus</span>
+                    <PixelArrow direction="right" size={12} className="shrink-0" />
+                  </RetroButton>
+                </div>
+              </div>
+            )}
+
+            {/* ------------------------------------------------------------- */}
+            {/* LANGKAH 3: KUIS OPSIONAL, KENANGAN & SUBMIT                   */}
+            {/* ------------------------------------------------------------- */}
+            {currentStep === 3 && (
+              <div className="space-y-6 animate-fade-in">
+                {/* Tantangan Kuis RPG */}
+                <div id="quiz-section">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-xs font-pixel text-slate-200">
+                      TANTANGAN KUIS RPG (OPSIONAL)
+                    </label>
+                    <span className="font-pixel text-[10px] text-[#ffd166]">
+                      {challenges.length}/3 SOAL
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 font-sans mb-4">
+                    Sematkan teka-teki rahasia yang ditemui di jalan. Menjawab benar memberikan hadiah buff perisai atau kecepatan!
+                  </p>
+
+                  {/* Daftar Soal */}
+                  <div className="space-y-4 mb-4">
+                    {challenges.map((c, cIdx) => (
+                      <div
+                        key={c.id || cIdx}
+                        className="rpg-inset p-4 border border-[#443e6d] rounded-xs space-y-3"
+                      >
+                        <div className="flex items-center justify-between pb-2 border-b border-[#2d294a]">
+                          <span className="font-pixel text-[10px] text-[#ffd166]">
+                            SOAL #{cIdx + 1}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveChallenge(cIdx)}
+                            className="text-[10px] font-pixel text-rose-400 hover:text-rose-300 cursor-pointer"
+                          >
+                            [Hapus]
+                          </button>
+                        </div>
+
+                        {/* Pertanyaan */}
+                        <div>
                           <input
                             type="text"
-                            maxLength={60}
-                            required
-                            value={opt}
-                            onChange={(e) => handleOptionChange(c.id, optIdx, e.target.value)}
-                            placeholder={`Jawaban ${String.fromCharCode(65 + optIdx)}`}
-                            className="rpg-input flex-1 p-2 text-xs rounded-none"
+                            maxLength={140}
+                            value={c.question}
+                            onChange={(e) => handleChallengeChange(cIdx, "question", e.target.value)}
+                            placeholder="Tuliskan pertanyaan rahasia..."
+                            className="rpg-input w-full p-2 text-xs rounded-none"
+                          />
+                        </div>
+
+                        {/* Pilihan Jawaban */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {c.options.map((opt, oIdx) => (
+                            <div key={oIdx} className="flex items-center gap-1.5">
+                              <input
+                                type="radio"
+                                name={`correct_${cIdx}`}
+                                checked={c.correctIndex === oIdx}
+                                onChange={() => handleChallengeChange(cIdx, "correctIndex", oIdx as 0 | 1 | 2 | 3)}
+                                title="Pilih sebagai kunci jawaban benar"
+                                className="accent-[#2ed573] cursor-pointer"
+                              />
+                              <input
+                                type="text"
+                                maxLength={60}
+                                value={opt}
+                                onChange={(e) => handleChallengeOptionChange(cIdx, oIdx, e.target.value)}
+                                placeholder={`Opsi ${String.fromCharCode(65 + oIdx)}`}
+                                className="rpg-input flex-1 p-1.5 text-xs rounded-none"
+                              />
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Hadiah Buff */}
+                        <div className="flex items-center justify-between pt-2 border-t border-[#2d294a] text-xs">
+                          <span className="font-sans text-slate-300">Hadiah Buff:</span>
+                          <select
+                            value={c.buff}
+                            onChange={(e) => handleChallengeChange(cIdx, "buff", e.target.value as BuffType)}
+                            className="rpg-input p-1 text-xs rounded-none bg-[#121324] border border-[#383461] text-[#ffd166]"
+                          >
+                            <option value="shield">🛡️ Perisai Hati (Kebal 1x)</option>
+                            <option value="speed">⚡ Sepatu Kilat (+35% Lari)</option>
+                            <option value="power_star">✨ Bintang Sihir (Tembak Bintang)</option>
+                          </select>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {challenges.length < 3 && (
+                    <RetroButton
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleAddChallenge}
+                      className="w-full py-2.5 text-xs font-pixel flex items-center justify-center gap-2 border-dashed"
+                    >
+                      <span>+ Tambah Soal Kuis ({challenges.length}/3)</span>
+                    </RetroButton>
+                  )}
+                </div>
+
+                {/* Pesan Khusus di 4 Bintang Kenangan (Accordion Opsional) */}
+                <div className="border border-[#383461] rounded-xs bg-[#141226] p-3.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowMemorySection(!showMemorySection)}
+                    className="w-full flex items-center justify-between text-left cursor-pointer"
+                  >
+                    <span className="font-pixel text-[10px] text-[#ffd166] flex items-center gap-1.5">
+                      <PixelStar size={11} />
+                      <span>Pesan Khusus di 4 Bintang Kenangan (Opsional)</span>
+                    </span>
+                    <span className="font-pixel text-[9px] text-slate-400">
+                      {showMemorySection ? "[Tutup ▲]" : "[Buka ▼]"}
+                    </span>
+                  </button>
+
+                  {showMemorySection && (
+                    <div className="mt-3 pt-3 border-t border-[#2a264a] space-y-2 animate-fade-in">
+                      <p className="font-sans text-xs text-slate-300 mb-2">
+                        Teks singkat (maks 40 karakter) yang muncul saat pemain menyentuh tiap bintang kenangan:
+                      </p>
+                      {memoryMessages.map((msg, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <span className="font-pixel text-[9px] text-[#ffd166] shrink-0 w-16">
+                            Bintang {idx + 1}:
+                          </span>
+                          <input
+                            type="text"
+                            maxLength={40}
+                            value={msg}
+                            onChange={(e) => {
+                              const next = [...memoryMessages];
+                              next[idx] = e.target.value;
+                              setMemoryMessages(next);
+                            }}
+                            placeholder={`Kenangan #${idx + 1}...`}
+                            className="rpg-input flex-1 p-1.5 text-xs rounded-none"
                           />
                         </div>
                       ))}
                     </div>
-                  </div>
-
-                  {/* Hadiah Buff (D4: Menggunakan BUFF_META) */}
-                  <div>
-                    <label className="block font-sans text-xs text-slate-200 mb-1">
-                      Hadiah Buff Jika Benar
-                    </label>
-                    <select
-                      value={c.buff}
-                      onChange={(e) => handleChallengeChange(c.id, "buff", e.target.value as BuffType)}
-                      className="rpg-input w-full p-2.5 text-xs rounded-none cursor-pointer"
-                    >
-                      {(Object.keys(BUFF_META) as BuffType[]).map((buffKey) => {
-                        const b = BUFF_META[buffKey];
-                        return (
-                          <option key={buffKey} value={buffKey}>
-                            {b.emoji} {b.label} ({b.desc})
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {challenges.length < 3 && (
-            <button
-              type="button"
-              onClick={handleAddChallenge}
-              className="w-full py-3 bg-[#1d1c3a] border-2 border-dashed border-[#ffbe3b]/50 hover:border-[#ffbe3b] text-amber-300 font-pixel text-[10px] tracking-wider transition-colors"
-            >
-              + TAMBAH SOAL KUIS ({challenges.length}/3)
-            </button>
-          )}
-
-          {/* Inline error kuis (D4) */}
-          {fieldErrors.challenges && (
-            <p
-              id="challenges-error"
-              role="alert"
-              className="text-xs text-rose-400 font-sans mt-2 flex items-center gap-1.5 font-medium"
-            >
-              <PixelAlert size={13} className="shrink-0 text-rose-400" />
-              <span>{fieldErrors.challenges}</span>
-            </p>
-          )}
-        </div>
-
-        {/* ================= SEKSI: PESAN BINTANG KENANGAN (OPSIONAL) ================= */}
-        <div className="mb-10">
-          <div className="rpg-box p-4 bg-[#1a1836] border-2 border-[#3b3663]">
-            <button
-              type="button"
-              onClick={() => setShowMemorySection((prev) => !prev)}
-              className="w-full flex items-center justify-between text-left cursor-pointer transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <PixelStar size={14} className="text-amber-400 shrink-0" />
-                <span className="font-pixel text-[11px] sm:text-xs text-amber-300 tracking-wide">
-                  Pesan Khusus di 4 Bintang Kenangan (Opsional)
-                </span>
-              </div>
-              <span className="font-pixel text-[9px] text-amber-200/70 ml-2">
-                {showMemorySection ? "[Tutup ▲]" : "[Buka ▼]"}
-              </span>
-            </button>
-
-            {showMemorySection && (
-              <div className="mt-4 pt-3 border-t border-[#2d2852] space-y-3.5">
-                <p className="text-[11px] text-slate-300 font-sans leading-relaxed">
-                  Tulis pesan kenangan singkat atau kalimat manis yang muncul saat pemain mengumpulkan tiap <strong>Bintang Kenangan</strong> di perjalanan (maksimal 40 karakter per bintang).
-                </p>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {[0, 1, 2, 3].map((idx) => {
-                    const placeholders = [
-                      "e.g. Makasih udah selalu ada",
-                      "e.g. Senyum terus ya!",
-                      "e.g. Kamu keren banget",
-                      "e.g. Dikit lagi sampai!",
-                    ];
-                    return (
-                      <div key={idx} className="space-y-1">
-                        <div className="flex justify-between items-center text-[10px] font-pixel text-slate-300">
-                          <label htmlFor={`memory-${idx}`}>Bintang {idx + 1}</label>
-                          <span
-                            className={
-                              (memoryMessages[idx]?.length || 0) > 40
-                                ? "text-rose-400 font-bold"
-                                : "text-slate-400"
-                            }
-                          >
-                            {memoryMessages[idx]?.length || 0}/40
-                          </span>
-                        </div>
-                        <input
-                          id={`memory-${idx}`}
-                          type="text"
-                          maxLength={40}
-                          value={memoryMessages[idx] || ""}
-                          placeholder={placeholders[idx]}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setMemoryMessages((prev) => {
-                              const next = [...prev];
-                              next[idx] = val;
-                              return next;
-                            });
-                          }}
-                          className="w-full bg-[#131127] border border-[#3b3663] rounded px-3 py-2 text-xs text-slate-100 placeholder-slate-500 font-sans focus:outline-none focus:border-amber-400"
-                        />
-                      </div>
-                    );
-                  })}
+                  )}
                 </div>
 
-                {fieldErrors.memoryMessages && (
-                  <p className="text-xs text-rose-400 font-sans flex items-center gap-1.5 font-medium">
-                    <PixelAlert size={13} className="shrink-0 text-rose-400" />
-                    <span>{fieldErrors.memoryMessages}</span>
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ================= SEKSI 5: MUSIK LATAR 8-BIT ================= */}
-        <div className="mb-10">
-          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[#282548]">
-            <span className="font-pixel text-xs text-[#2bcbba] bg-[#2bcbba]/10 px-2 py-0.5 border border-[#2bcbba]/30">
-              05
-            </span>
-            <h3 className="font-pixel text-xs text-slate-100 tracking-wide">
-              MUSIK LATAR 8-BIT
-            </h3>
-          </div>
-
-          {/* Tab Pilihan Tipe Musik */}
-          <div className="flex gap-2.5 mb-3.5">
-            <button
-              type="button"
-              onClick={() => {
-                setMusicType("preset");
-                if (testAudioRef.current) {
-                  testAudioRef.current.pause();
-                  setIsPlayingTestAudio(false);
-                }
-              }}
-              className={`flex-1 py-2 px-3 text-[10px] font-pixel border-2 border-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${musicType === "preset"
-                ? "bg-gradient-to-r from-amber-400 to-amber-500 text-black font-bold shadow-[2px_2px_0_#000]"
-                : "bg-[#1d1c3a] text-slate-300 hover:text-white"
-                }`}
-            >
-              <PixelAudio size={12} className="shrink-0" />
-              <span>Melodi Pilihan</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMusicType("custom");
-                stopBgm();
-                setPreviewingPreset(null);
-              }}
-              className={`flex-1 py-2 px-3 text-[10px] font-pixel border-2 border-black transition-all cursor-pointer flex items-center justify-center gap-1.5 ${musicType === "custom"
-                ? "bg-gradient-to-r from-amber-400 to-amber-500 text-black font-bold shadow-[2px_2px_0_#000]"
-                : "bg-[#1d1c3a] text-slate-300 hover:text-white"
-                }`}
-            >
-              <PixelScroll size={12} className="shrink-0" />
-              <span>Tautan .mp3 Sendiri</span>
-            </button>
-          </div>
-
-          {musicType === "preset" ? (
-            <div className="space-y-2.5">
-              {PRESET_BGM_OPTIONS.map((p) => (
-                <div
-                  key={p.id}
-                  className={`flex items-center justify-between p-3 rounded-none border cursor-pointer transition-all ${selectedPreset === p.id
-                    ? "border-[#ffbe3b] bg-[#1f1d3c] shadow-[2px_2px_0_#000]"
-                    : "border-slate-700/60 bg-[#0c0b17] hover:border-slate-500"
-                    }`}
-                  onClick={() => setSelectedPreset(p.id)}
-                >
-                  <label className="font-sans text-xs text-slate-200 cursor-pointer flex items-center gap-2.5">
-                    <input
-                      type="radio"
-                      name="presetMusic"
-                      checked={selectedPreset === p.id}
-                      onChange={() => setSelectedPreset(p.id)}
-                      className="accent-amber-400"
-                    />
-                    <span className="font-medium">{p.label}</span>
-                  </label>
+                {/* Navigasi Langkah 3 & Submit Final */}
+                <div className="pt-4 border-t border-[#383461] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                   <RetroButton
                     type="button"
-                    variant={previewingPreset === p.id ? "danger" : "secondary"}
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleTogglePresetPreview(p.id);
-                    }}
-                    className="!py-1 !px-2.5 !text-[9px]"
+                    variant="secondary"
+                    size="md"
+                    onClick={() => setCurrentStep(2)}
+                    className="py-3 px-5 text-xs font-pixel flex items-center justify-center gap-2"
                   >
-                    {previewingPreset === p.id ? "⏹ STOP" : "▶ TES"}
+                    <PixelArrow direction="left" size={12} className="shrink-0" />
+                    <span>Kembali ke Foto</span>
+                  </RetroButton>
+
+                  <RetroButton
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    disabled={isSubmitting || isAnyChallengeUploading}
+                    className="py-3.5 px-7 text-xs sm:text-sm font-pixel flex items-center justify-center gap-2 shadow-[4px_4px_0px_#000] hover:scale-[1.02] transition-transform"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <PixelSparkle size={14} className="animate-spin text-black shrink-0" />
+                        <span>{statusText || "Memproses..."}</span>
+                      </>
+                    ) : (
+                      <>
+                        <PixelGift size={16} className="text-black shrink-0" />
+                        <span>BUNGKUS KADO SEKARANG</span>
+                      </>
+                    )}
                   </RetroButton>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <p className="font-sans text-xs text-slate-400">
-                Masukkan tautan langsung file audio berakhiran <code>.mp3</code> (harus protokol HTTPS).
-              </p>
-              <div className="flex gap-2">
-                <input
-                  id="musicUrl"
-                  type="url"
-                  value={musicUrl}
-                  onChange={(e) => setMusicUrl(e.target.value)}
-                  placeholder="https://domain.com/lagu-kenangan.mp3"
-                  className="rpg-input flex-1 p-2.5 text-xs rounded-none"
-                />
-                <RetroButton
-                  type="button"
-                  variant={isPlayingTestAudio ? "danger" : "secondary"}
-                  size="sm"
-                  onClick={handleToggleTestMusic}
-                  disabled={!musicUrl.trim()}
-                >
-                  {isPlayingTestAudio ? "⏹ STOP" : "▶ TES"}
-                </RetroButton>
               </div>
-            </div>
-          )}
+            )}
+          </form>
         </div>
 
-        {/* ================= SUBMIT BUTTON (D3: Disabled & label jika ada soal mengunggah) ================= */}
-        <div className="pt-2">
-          <RetroButton
-            type="submit"
-            variant="primary"
-            size="lg"
-            disabled={isSubmitting || isAnyChallengeUploading}
-            className="w-full py-4 text-xs sm:text-sm hover:scale-[1.01] transition-transform flex items-center justify-center gap-2"
-          >
-            {isSubmitting ? (
-              <>
-                <PixelSparkle size={14} className="animate-spin shrink-0 text-black" />
-                <span>{statusText || "Memproses..."}</span>
-              </>
-            ) : isAnyChallengeUploading ? (
-              <>
-                <PixelSparkle size={14} className="animate-spin shrink-0 text-black" />
-                <span>Menunggu unggahan foto soal...</span>
-              </>
-            ) : (
-              <>
-                <PixelGift size={16} className="shrink-0 text-black" />
-                <span>BUNGKUS KADO SEKARANG</span>
-              </>
-            )}
-          </RetroButton>
+        {/* ========================================================================= */}
+        {/* KOLOM KANAN: LIVE PREVIEW KARTU KADO (Desktop Sticky / Mobile Collapsible) */}
+        {/* ========================================================================= */}
+        <div className={`lg:col-span-5 w-full ${showMobilePreview ? "block" : "hidden lg:block"} lg:sticky lg:top-6`}>
+          <div className="rpg-box-golden p-4 sm:p-5 shadow-2xl relative">
+            {/* Header Pratinjau */}
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#ffd166]/30">
+              <div className="flex items-center gap-1.5">
+                <PixelSparkle size={12} className="text-[#ffd166] animate-pulse" />
+                <span className="font-pixel text-[10px] text-[#ffd166] tracking-wider">
+                  PRATINJAU KADO LIVE
+                </span>
+              </div>
+              <span className="text-[9px] font-pixel text-[#2ed573] bg-[#2ed573]/20 px-1.5 py-0.5 border border-[#2ed573]/40">
+                REAL-TIME
+              </span>
+            </div>
+
+            {/* Kartu Polaroid Pratinjau */}
+            <div className="bg-[#fffef0] text-[#1a1c2c] p-4 rounded-xs shadow-[4px_4px_0px_#000] border-2 border-[#1a1c2c] space-y-3.5">
+              {/* Header Kartu */}
+              <div className="flex items-center justify-between border-b border-gray-300 pb-2">
+                <div>
+                  <span className="text-[9px] font-pixel text-gray-500 uppercase tracking-widest block">
+                    Kado Spesial Untuk
+                  </span>
+                  <span className="font-pixel text-xs sm:text-sm text-[#1a1c2c] block mt-0.5 font-bold">
+                    {receiverName.trim() || "Nama Penerima"}
+                  </span>
+                </div>
+                <div className="w-10 h-10 bg-[#121324] border border-black rounded-xs flex items-center justify-center shrink-0">
+                  <canvas
+                    ref={livePreviewAvatarCanvasRef}
+                    width={64}
+                    height={64}
+                    className="w-8 h-8 image-pixelated"
+                  />
+                </div>
+              </div>
+
+              {/* Foto Kenangan Live Preview */}
+              <div className="w-full aspect-video bg-[#1e1c33] rounded-xs overflow-hidden flex items-center justify-center border-2 border-black relative">
+                {imagePreview ? (
+                  <img
+                    src={imagePreview}
+                    alt="Pratinjau Kado"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="text-center p-4">
+                    <PixelGift size={24} className="mx-auto mb-1.5 text-amber-300/60" />
+                    <span className="font-pixel text-[9px] text-gray-400 block">
+                      Foto kenangan akan tampil di sini
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Kutipan Pesan Rahasia */}
+              <div className="bg-[#f7f5e7] p-2.5 border border-gray-300 rounded-xs min-h-[64px]">
+                <p className="font-sans text-xs text-gray-700 italic leading-relaxed line-clamp-3">
+                  &ldquo;{messageText.trim() || "Surat rahasia dan ucapan hangatmu akan terketik di sini..."}&rdquo;
+                </p>
+              </div>
+
+              {/* Info Badges */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[9px] font-pixel text-gray-600">
+                <span className="bg-gray-200 px-2 py-0.5 rounded-xs border border-gray-300">
+                  ♪ {musicType === "preset" ? PRESET_BGM_OPTIONS.find((p) => p.id === selectedPreset)?.label.split(" ")[0] || "Cozy" : "Custom MP3"}
+                </span>
+                <span className="bg-gray-200 px-2 py-0.5 rounded-xs border border-gray-300">
+                  {challenges.length} Kuis
+                </span>
+                <span className="bg-gray-200 px-2 py-0.5 rounded-xs border border-gray-300">
+                  Format 16-Bit
+                </span>
+              </div>
+            </div>
+
+            {/* Status Checklist Ringkas */}
+            <div className="mt-4 pt-3 border-t border-[#383461] space-y-1.5 text-[10px] font-sans text-slate-300">
+              <div className="flex items-center justify-between">
+                <span>Nama & Pesan:</span>
+                <span className={receiverName.trim() && messageText.trim() ? "text-[#2ed573] font-bold" : "text-amber-400"}>
+                  {receiverName.trim() && messageText.trim() ? "✓ Lengkap" : "Menunggu input"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Foto Kenangan:</span>
+                <span className={imageFile || cachedUploadedImageUrl ? "text-[#2ed573] font-bold" : "text-amber-400"}>
+                  {imageFile || cachedUploadedImageUrl ? "✓ Terunggah" : "Belum diunggah"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Tantangan Kuis:</span>
+                <span className="text-[#ffd166]">
+                  {challenges.length > 0 ? `${challenges.length} Tantangan` : "0 (Opsional)"}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
-      </form>
-    </>
+      </div>
+    </div>
   );
 }

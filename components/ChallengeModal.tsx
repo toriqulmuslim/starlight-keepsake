@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import type { ChallengeItem } from "@/lib/types";
 import { BUFF_META } from "@/lib/types";
 import { playCorrect, playWrong } from "@/lib/game/sfx";
@@ -22,6 +22,16 @@ export default function ChallengeModal({
 }: ChallengeModalProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Bersihkan timer saat unmount agar bebas memory leak
+  useEffect(() => {
+    return () => {
+      if (feedbackTimerRef.current) {
+        clearTimeout(feedbackTimerRef.current);
+      }
+    };
+  }, []);
 
   const buffMeta = BUFF_META[challenge.buff] || BUFF_META.shield;
 
@@ -39,7 +49,7 @@ export default function ChallengeModal({
     }
 
     // Feedback selama QUIZ_FEEDBACK_MS (1200 ms) sebelum menutup modal
-    setTimeout(() => {
+    feedbackTimerRef.current = setTimeout(() => {
       onAnswered(isCorrect);
     }, 1200);
   };
@@ -47,6 +57,7 @@ export default function ChallengeModal({
   // Keyboard shortcut: tombol 1 sampai 4 untuk memilih opsi
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.repeat) return;
       if (isAnswered) return;
       if (e.key === "1") handleSelectOption(0);
       else if (e.key === "2") handleSelectOption(1);

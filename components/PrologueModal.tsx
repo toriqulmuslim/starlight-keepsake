@@ -34,6 +34,8 @@ export default function PrologueModal({
   const [displayedCount, setDisplayedCount] = useState<number>(0);
   const partnerAvatar: AvatarGender = avatar === "female" ? "male" : "female";
   const partnerCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const displayedCountRef = useRef<number>(0);
 
   // Definisi naskah dialog tiap adegan (v4.0 MMORPG Live Cutscene)
   const scenes = useMemo(() => [
@@ -71,10 +73,17 @@ export default function PrologueModal({
 
   // Efek Typewriter (~28ms per karakter) + SFX retro blip tiap 2 karakter
   useEffect(() => {
-    let charIdx = 0;
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
 
-    const timer = setInterval(() => {
+    let charIdx = 0;
+    displayedCountRef.current = 0;
+
+    timerRef.current = setInterval(() => {
       charIdx++;
+      displayedCountRef.current = charIdx;
       setDisplayedCount(charIdx);
 
       if (charIdx % 2 === 0 && !isMuted) {
@@ -86,32 +95,51 @@ export default function PrologueModal({
       }
 
       if (charIdx >= chars.length) {
-        clearInterval(timer);
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
       }
     }, 28);
 
-    return () => clearInterval(timer);
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
   }, [scene, chars.length, isMuted]);
 
-  // Fungsi navigasi adegan (Smart Interaction: klik saat mengetik -> selesaikan; saat selesai -> lanjut)
+  // Fungsi navigasi adegan (Smart Interaction: klik/spasi saat mengetik -> selesaikan; saat selesai -> lanjut)
   const handleAdvance = useCallback(() => {
-    if (isTyping) {
-      setDisplayedCount(chars.length);
-    } else {
-      if (scene < 3) {
-        const next = (scene + 1) as 1 | 2 | 3;
-        setScene(next);
-        setDisplayedCount(0);
-        onSceneChange?.(next);
-      } else {
-        onComplete();
+    // Tahap 1: Jika masih mengetik, batalkan timer aktif dan tampilkan 100% teks seketika
+    if (timerRef.current !== null || displayedCountRef.current < chars.length) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
       }
+      displayedCountRef.current = chars.length;
+      setDisplayedCount(chars.length);
+      return;
     }
-  }, [isTyping, chars.length, scene, onSceneChange, onComplete]);
+
+    // Tahap 2: Teks sudah tampil penuh, lanjut ke adegan berikutnya atau selesai
+    if (scene < 3) {
+      const next = (scene + 1) as 1 | 2 | 3;
+      setScene(next);
+      setDisplayedCount(0);
+      displayedCountRef.current = 0;
+      onSceneChange?.(next);
+    } else {
+      onComplete();
+    }
+  }, [chars.length, scene, onSceneChange, onComplete]);
 
   // Dukungan navigasi keyboard (Spasi / Enter / Panah Kanan untuk lanjut, Esc untuk lewati)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+
       if (e.key === "Escape") {
         e.preventDefault();
         onComplete();
